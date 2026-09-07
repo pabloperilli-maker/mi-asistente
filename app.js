@@ -154,13 +154,17 @@
     recognition.maxAlternatives = 1;
     recognition.continuous = false;
 
+    var resultadoFinalProcesado = false;
+
     recognition.onstart = function () {
       recognizing = true;
+      resultadoFinalProcesado = false;
       micBtn.classList.add('listening');
       micLabel.textContent = 'Escuchando... hablá ahora';
     };
 
     recognition.onresult = function (event) {
+      if (resultadoFinalProcesado) return;
       var texto = '';
       for (var i = 0; i < event.results.length; i++) {
         texto += event.results[i][0].transcript;
@@ -168,7 +172,11 @@
       taskInput.value = texto;
       var ultimo = event.results[event.results.length - 1];
       if (ultimo.isFinal) {
+        resultadoFinalProcesado = true;
         procesarTextoYAgregar(texto, { origen: 'voz' });
+        // Safari/WebKit (iOS) a veces sigue escuchando y dispara más
+        // resultados "finales" para la misma frase; se corta acá.
+        try { recognition.stop(); } catch (e) { /* ya estaba detenido */ }
       }
     };
 
