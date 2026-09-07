@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#4a7cf6" />
+<title>Mi Agenda de Voz</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="app">
+
+  <header class="mic-card">
+    <button id="micBtn" class="mic-btn" type="button" aria-label="Grabar tarea por voz">
+      <svg id="micIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+        <line x1="12" y1="19" x2="12" y2="23"></line>
+        <line x1="8" y1="23" x2="16" y2="23"></line>
+      </svg>
+    </button>
+    <p id="micLabel" class="mic-label">Tocá para hablar</p>
+  </header>
+
+  <section class="input-card">
+    <div class="input-row">
+      <input id="taskInput" type="text" placeholder="Escribí una tarea o usá el micrófono..." autocomplete="off" />
+      <button id="addBtn" class="add-btn" type="button" aria-label="Agregar tarea">+</button>
+    </div>
+    <div class="chips-row">
+      <button id="dateChip" class="chip" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span id="dateChipLabel">Fecha y hora</span>
+      </button>
+      <button id="reminderChip" class="chip" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span>Recordatorio</span>
+      </button>
+    </div>
+    <input id="dateTimeNative" type="datetime-local" class="hidden-native-input" />
+  </section>
+
+  <section class="tasks-section" id="vencidasSection" hidden>
+    <div class="section-header">
+      <h2><span class="section-icon warn">⚠️</span> Vencidas</h2>
+      <span class="section-count" id="vencidasCount">0</span>
+    </div>
+    <div class="task-list" id="vencidasList"></div>
+  </section>
+
+  <section class="tasks-section">
+    <div class="section-header">
+      <h2><span class="section-icon">☀️</span> Hoy</h2>
+      <span class="section-count" id="hoyCount">0</span>
+    </div>
+    <div class="task-list" id="hoyList"></div>
+    <div class="empty-state" id="hoyEmpty" hidden>No tenés tareas para hoy. Tocá el micrófono para agregar una.</div>
+  </section>
+
+  <section class="tasks-section">
+    <div class="section-header">
+      <h2><span class="section-icon">📋</span> Próximas</h2>
+      <span class="section-count" id="proximasCount">0</span>
+    </div>
+    <div class="task-list" id="proximasList"></div>
+    <div class="empty-state" id="proximasEmpty" hidden>No tenés tareas programadas para más adelante.</div>
+  </section>
+
+  <section class="tasks-section" id="completadasSection" hidden>
+    <button class="section-header collapsible" id="completadasToggle" type="button">
+      <h2><span class="section-icon">✅</span> Completadas</h2>
+      <span class="section-count" id="completadasCount">0</span>
+    </button>
+    <div class="task-list" id="completadasList" hidden></div>
+  </section>
+
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="dateParser.js"></script>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
