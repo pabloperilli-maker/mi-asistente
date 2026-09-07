@@ -86,6 +86,14 @@
       if (/manana/.test(periodo) && h === 12) h = 0;
       return { span: m, h: h, min: min };
     }
+    // Variante sin "a las" (ej. dictado que recorta la preposición): "19 horas", "19hs", "19:30hs".
+    if ((m = norm.match(/\b(\d{1,2})(?:[:.,](\d{2}))?\s*(hs\.?|horas?)\b/))) {
+      var h2 = parseInt(m[1], 10);
+      if (h2 <= 23) {
+        var min2 = m[2] ? parseInt(m[2], 10) : 0;
+        return { span: m, h: h2, min: min2 };
+      }
+    }
     return null;
   }
 
@@ -185,7 +193,9 @@
       hasTime = true;
     } else if (fechaInfo) {
       date = fechaInfo.dt;
-      date.setHours(9, 0, 0, 0);
+      // Sin hora explícita: se toma como "en algún momento de ese día",
+      // no como una hora fija que pueda quedar en el pasado horas después.
+      date.setHours(23, 59, 0, 0);
       hasDate = true;
     } else if (horaInfo) {
       date = new Date(now);
