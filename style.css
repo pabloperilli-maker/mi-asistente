@@ -373,6 +373,9 @@ html, body {
   z-index: 50;
   max-width: 90vw;
 }
+.toast[hidden] {
+  display: none;
+}
 .toast button {
   background: none;
   border: none;
