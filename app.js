@@ -94,6 +94,7 @@
 
   // --- Toast con deshacer ---
   var toastTimer = null;
+  var suprimirClickAfuera = false;
   function mostrarToast(msg, opciones) {
     opciones = opciones || {};
     toast.innerHTML = '';
@@ -104,13 +105,26 @@
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.textContent = 'Deshacer';
-      btn.addEventListener('click', function () {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
         opciones.onUndo();
         ocultarToast();
       });
       toast.appendChild(btn);
     }
+    var cerrar = document.createElement('button');
+    cerrar.type = 'button';
+    cerrar.setAttribute('aria-label', 'Cerrar aviso');
+    cerrar.textContent = '✕';
+    cerrar.addEventListener('click', function (e) {
+      e.stopPropagation();
+      ocultarToast();
+    });
+    toast.appendChild(cerrar);
+
     toast.hidden = false;
+    suprimirClickAfuera = true;
+    setTimeout(function () { suprimirClickAfuera = false; }, 0);
     clearTimeout(toastTimer);
     toastTimer = setTimeout(ocultarToast, opciones.duracion || 4000);
   }
@@ -118,6 +132,12 @@
     toast.hidden = true;
     clearTimeout(toastTimer);
   }
+  function cerrarSiEsAfuera(e) {
+    if (suprimirClickAfuera) return;
+    if (!toast.hidden && !toast.contains(e.target)) ocultarToast();
+  }
+  document.addEventListener('click', cerrarSiEsAfuera);
+  document.addEventListener('touchstart', cerrarSiEsAfuera, { passive: true });
 
   // --- Reconocimiento de voz ---
   var SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
