@@ -11,7 +11,25 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div class="app">
+
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <h1>Mi Agenda de Voz</h1>
+    <p class="auth-sub">Iniciá sesión para ver y guardar tus tareas.</p>
+    <input id="authEmail" type="email" placeholder="Correo electrónico" autocomplete="username" />
+    <input id="authPassword" type="password" placeholder="Contraseña" autocomplete="current-password" />
+    <p id="authError" class="auth-error" hidden></p>
+    <button id="authLoginBtn" class="btn btn-primary auth-btn" type="button">Iniciar sesión</button>
+    <button id="authSignupBtn" class="btn btn-secondary auth-btn" type="button">Crear cuenta</button>
+  </div>
+</div>
+
+<div class="app" id="appRoot" hidden>
+
+  <div class="user-bar">
+    <span id="userEmailLabel"></span>
+    <button id="logoutBtn" type="button">Cerrar sesión</button>
+  </div>
 
   <header class="mic-card">
     <button id="micBtn" class="mic-btn" type="button" aria-label="Grabar tarea por voz">
@@ -81,6 +99,7 @@
 
 <div id="toast" class="toast" hidden></div>
 
+<script type="module" src="firebase-init.js"></script>
 <script src="dateParser.js"></script>
 <script src="app.js"></script>
 <script>

@@ -209,6 +209,9 @@ html, body {
   flex-direction: column;
   gap: 10px;
 }
+.task-list[hidden] {
+  display: none;
+}
 
 .task-card {
   background: var(--card-bg);
@@ -353,6 +356,73 @@ html, body {
   text-align: center;
   color: var(--text-muted);
   font-size: 14px;
+}
+
+/* --- Login --- */
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.auth-screen[hidden] {
+  display: none;
+}
+.auth-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  padding: 32px 24px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 2px 10px rgba(20, 30, 60, 0.05);
+  text-align: center;
+}
+.auth-card h1 {
+  font-size: 20px;
+  margin: 0 0 6px;
+}
+.auth-sub {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+.auth-card input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 15px;
+  margin-bottom: 10px;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+}
+.auth-card input:focus { border-color: var(--blue); }
+.auth-error {
+  color: var(--danger);
+  font-size: 13px;
+  text-align: left;
+  margin: 0 0 10px;
+}
+.auth-btn { width: 100%; margin-bottom: 8px; padding: 12px; font-size: 15px; }
+
+/* --- Barra de usuario --- */
+.user-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 6px 4px 14px;
+}
+.user-bar button {
+  border: none;
+  background: none;
+  color: var(--blue-dark);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
 }
 
 /* --- Toast --- */

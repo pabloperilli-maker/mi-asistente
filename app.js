@@ -1,12 +1,15 @@
 (function () {
   'use strict';
 
-  var STORAGE_KEY = 'agenda_tareas_v1';
+  var STORAGE_KEY_LEGACY = 'agenda_tareas_v1'; // localStorage previo a Firestore, solo para migrar una vez
   var LEAD_MS = 15 * 60 * 1000; // avisar 15 minutos antes del vencimiento
   var parseSpanishDateTime = window.DateParser.parseSpanishDateTime;
 
   // --- Estado ---
-  var tasks = cargarTareas();
+  var tasks = [];
+  var currentUid = null;
+  var unsubscribeTasks = null;
+  var appIniciada = false;
   var pendingDate = null; // Date | null, elegida a mano con el chip "Fecha y hora"
   var pendingReminder = false;
   var editingId = null;
@@ -39,21 +42,15 @@
   var completadasCount = document.getElementById('completadasCount');
   var completadasToggle = document.getElementById('completadasToggle');
 
-  // --- Persistencia ---
-  function cargarTareas() {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  function guardarTareas() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    } catch (e) { /* almacenamiento no disponible */ }
-  }
+  var authScreen = document.getElementById('authScreen');
+  var appRoot = document.getElementById('appRoot');
+  var authEmail = document.getElementById('authEmail');
+  var authPassword = document.getElementById('authPassword');
+  var authError = document.getElementById('authError');
+  var authLoginBtn = document.getElementById('authLoginBtn');
+  var authSignupBtn = document.getElementById('authSignupBtn');
+  var userEmailLabel = document.getElementById('userEmailLabel');
+  var logoutBtn = document.getElementById('logoutBtn');
 
   function nuevoId() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -240,15 +237,15 @@
   function procesarTextoYAgregar(textoOriginal, opts) {
     opts = opts || {};
     var texto = (textoOriginal || '').trim();
-    if (!texto) return;
+    if (!texto || !currentUid) return;
 
     var resultado = parseSpanishDateTime(texto, new Date());
     var dueDate = pendingDate || resultado.date;
     var hasTime = pendingDate ? true : resultado.hasTime;
     var titulo = resultado.title || texto;
 
+    var id = nuevoId();
     var tarea = {
-      id: nuevoId(),
       text: titulo,
       dueDate: dueDate ? dueDate.toISOString() : null,
       hasTime: hasTime,
@@ -258,18 +255,16 @@
       notifiedDue: false,
       createdAt: new Date().toISOString()
     };
-    tasks.unshift(tarea);
-    guardarTareas();
-    render();
+    window.FB.setDoc(window.FB.taskDoc(currentUid, id), tarea).catch(function () {
+      mostrarToast('No se pudo guardar. Revisá tu conexión.');
+    });
 
     if (tarea.reminder) pedirPermisoNotificaciones();
 
     var detalle = dueDate ? formatearFechaHora(tarea.dueDate, hasTime) : 'sin fecha';
     mostrarToast('Tarea agregada: "' + titulo + '" (' + detalle + ')', {
       onUndo: function () {
-        tasks = tasks.filter(function (t) { return t.id !== tarea.id; });
-        guardarTareas();
-        render();
+        window.FB.deleteDoc(window.FB.taskDoc(currentUid, id)).catch(function () {});
       }
     });
 
@@ -323,51 +318,38 @@
 
   // --- Marcar como hecha / eliminar / editar ---
   function marcarHecha(id) {
-    var t = tasks.find(function (x) { return x.id === id; });
-    if (!t) return;
-    t.done = true;
-    guardarTareas();
-    render();
+    window.FB.updateDoc(window.FB.taskDoc(currentUid, id), { done: true }).catch(function () {});
   }
 
   function restaurar(id) {
-    var t = tasks.find(function (x) { return x.id === id; });
-    if (!t) return;
-    t.done = false;
-    guardarTareas();
-    render();
+    window.FB.updateDoc(window.FB.taskDoc(currentUid, id), { done: false }).catch(function () {});
   }
 
   function eliminar(id) {
-    var idx = tasks.findIndex(function (x) { return x.id === id; });
-    if (idx === -1) return;
-    lastDeleted = { tarea: tasks[idx], idx: idx };
-    tasks.splice(idx, 1);
-    guardarTareas();
-    render();
+    var t = tasks.find(function (x) { return x.id === id; });
+    if (!t) return;
+    var copia = {};
+    Object.keys(t).forEach(function (k) { if (k !== 'id') copia[k] = t[k]; });
+    window.FB.deleteDoc(window.FB.taskDoc(currentUid, id)).catch(function () {});
     mostrarToast('Tarea eliminada', {
       onUndo: function () {
-        if (!lastDeleted) return;
-        tasks.splice(Math.min(lastDeleted.idx, tasks.length), 0, lastDeleted.tarea);
-        lastDeleted = null;
-        guardarTareas();
-        render();
+        window.FB.setDoc(window.FB.taskDoc(currentUid, id), copia).catch(function () {});
       }
     });
   }
 
   function guardarEdicion(id, nuevoTexto, nuevaFecha, nuevoReminder) {
-    var t = tasks.find(function (x) { return x.id === id; });
-    if (!t) return;
-    t.text = nuevoTexto.trim() || t.text;
-    t.dueDate = nuevaFecha ? nuevaFecha.toISOString() : null;
-    t.hasTime = !!nuevaFecha;
-    t.reminder = nuevoReminder;
-    t.notifiedSoon = false;
-    t.notifiedDue = false;
+    var cambios = {
+      dueDate: nuevaFecha ? nuevaFecha.toISOString() : null,
+      hasTime: !!nuevaFecha,
+      reminder: nuevoReminder,
+      notifiedSoon: false,
+      notifiedDue: false
+    };
+    var textoLimpio = nuevoTexto.trim();
+    if (textoLimpio) cambios.text = textoLimpio;
     editingId = null;
-    guardarTareas();
-    render();
+    window.FB.updateDoc(window.FB.taskDoc(currentUid, id), cambios).catch(function () {});
   }
 
   // --- Iconos SVG reutilizables ---
@@ -603,26 +585,119 @@
 
   // --- Chequeo periódico de recordatorios ---
   function chequearRecordatorios() {
-    var cambio = false;
     tasks.forEach(function (t) {
       if (t.done || !t.dueDate || !t.reminder) return;
       var ms = new Date(t.dueDate).getTime() - Date.now();
       if (ms <= 0 && !t.notifiedDue) {
         notificar('Tarea vencida', t.text);
-        t.notifiedDue = true;
-        cambio = true;
+        window.FB.updateDoc(window.FB.taskDoc(currentUid, t.id), { notifiedDue: true }).catch(function () {});
       } else if (ms > 0 && ms <= LEAD_MS && !t.notifiedSoon) {
         notificar('Por vencer: ' + t.text, 'Vence a las ' + formatearFechaHora(t.dueDate, true).split('· ')[1]);
-        t.notifiedSoon = true;
-        cambio = true;
+        window.FB.updateDoc(window.FB.taskDoc(currentUid, t.id), { notifiedSoon: true }).catch(function () {});
       }
     });
-    if (cambio) guardarTareas();
     render();
   }
 
-  // --- Inicio ---
-  setupRecognition();
-  render();
-  setInterval(chequearRecordatorios, 30000);
+  // --- Autenticación ---
+  function mostrarErrorAuth(msg) {
+    authError.textContent = msg;
+    authError.hidden = false;
+  }
+  function limpiarErrorAuth() {
+    authError.hidden = true;
+  }
+  function traducirErrorAuth(err) {
+    var code = (err && err.code) || '';
+    if (code.indexOf('wrong-password') !== -1 || code.indexOf('invalid-credential') !== -1) return 'Contraseña incorrecta.';
+    if (code.indexOf('user-not-found') !== -1) return 'No existe una cuenta con ese correo. Tocá "Crear cuenta".';
+    if (code.indexOf('email-already-in-use') !== -1) return 'Ya existe una cuenta con ese correo. Iniciá sesión.';
+    if (code.indexOf('weak-password') !== -1) return 'La contraseña debe tener al menos 6 caracteres.';
+    if (code.indexOf('invalid-email') !== -1) return 'El correo no es válido.';
+    return 'Ocurrió un error. Probá de nuevo.';
+  }
+
+  function iniciarSesion() {
+    limpiarErrorAuth();
+    var email = authEmail.value.trim();
+    var pass = authPassword.value;
+    if (!email || !pass) { mostrarErrorAuth('Completá correo y contraseña.'); return; }
+    window.FB.signIn(email, pass).catch(function (err) { mostrarErrorAuth(traducirErrorAuth(err)); });
+  }
+  function crearCuenta() {
+    limpiarErrorAuth();
+    var email = authEmail.value.trim();
+    var pass = authPassword.value;
+    if (!email || !pass) { mostrarErrorAuth('Completá correo y contraseña.'); return; }
+    window.FB.signUp(email, pass).catch(function (err) { mostrarErrorAuth(traducirErrorAuth(err)); });
+  }
+
+  authLoginBtn.addEventListener('click', iniciarSesion);
+  authSignupBtn.addEventListener('click', crearCuenta);
+  authPassword.addEventListener('keydown', function (e) { if (e.key === 'Enter') iniciarSesion(); });
+  logoutBtn.addEventListener('click', function () { window.FB.logout(); });
+
+  function migrarTareasLocalesSiHaceFalta(uid) {
+    var raw;
+    try { raw = localStorage.getItem(STORAGE_KEY_LEGACY); } catch (e) { raw = null; }
+    if (!raw) return;
+    var locales;
+    try { locales = JSON.parse(raw); } catch (e) { return; }
+    if (!locales || !locales.length) return;
+    window.FB.getTasksOnce(uid).then(function (snap) {
+      if (!snap.empty) return; // ya hay tareas en la nube, no se pisan
+      locales.forEach(function (t) {
+        var copia = {};
+        Object.keys(t).forEach(function (k) { if (k !== 'id') copia[k] = t[k]; });
+        window.FB.setDoc(window.FB.taskDoc(uid, t.id || nuevoId()), copia).catch(function () {});
+      });
+      try { localStorage.removeItem(STORAGE_KEY_LEGACY); } catch (e) { /* nada que hacer */ }
+    }).catch(function () { /* si falla, quedan solo en localStorage */ });
+  }
+
+  function iniciarApp(uid) {
+    if (appIniciada) return;
+    appIniciada = true;
+    migrarTareasLocalesSiHaceFalta(uid);
+    unsubscribeTasks = window.FB.onTasksSnapshot(uid, function (snap) {
+      tasks = [];
+      snap.forEach(function (docSnap) {
+        var data = docSnap.data();
+        data.id = docSnap.id;
+        tasks.push(data);
+      });
+      render();
+    });
+    setupRecognition();
+    setInterval(chequearRecordatorios, 30000);
+  }
+
+  function cerrarApp() {
+    appIniciada = false;
+    if (unsubscribeTasks) { unsubscribeTasks(); unsubscribeTasks = null; }
+    tasks = [];
+    currentUid = null;
+    render();
+  }
+
+  function esperarFirebase(cb) {
+    if (window.FB) { cb(); return; }
+    window.addEventListener('firebase-ready', cb, { once: true });
+  }
+
+  esperarFirebase(function () {
+    window.FB.onAuthStateChanged(function (user) {
+      if (user) {
+        currentUid = user.uid;
+        authScreen.hidden = true;
+        appRoot.hidden = false;
+        userEmailLabel.textContent = user.email || '';
+        iniciarApp(user.uid);
+      } else {
+        cerrarApp();
+        authScreen.hidden = false;
+        appRoot.hidden = true;
+      }
+    });
+  });
 })();
