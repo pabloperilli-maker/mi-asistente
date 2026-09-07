@@ -126,7 +126,7 @@
     suprimirClickAfuera = true;
     setTimeout(function () { suprimirClickAfuera = false; }, 0);
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(ocultarToast, opciones.duracion || 4000);
+    toastTimer = setTimeout(ocultarToast, opciones.duracion || 2000);
   }
   function ocultarToast() {
     toast.hidden = true;
