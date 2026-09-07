@@ -215,8 +215,17 @@
 
   // --- Notificaciones ---
   function pedirPermisoNotificaciones() {
-    if ('Notification' in window && Notification.permission === 'default') {
+    if (!('Notification' in window)) {
+      // En iPhone, Safari solo permite notificaciones si la app está
+      // instalada en la pantalla de inicio; en una pestaña normal no
+      // existe la API. Igual queda el resaltado visual en la lista.
+      mostrarToast('Este navegador no puede avisarte con notificaciones. En iPhone, instalá la app en la pantalla de inicio (Compartir → Agregar a inicio) para que funcionen.', { duracion: 6000 });
+      return;
+    }
+    if (Notification.permission === 'default') {
       Notification.requestPermission();
+    } else if (Notification.permission === 'denied') {
+      mostrarToast('Bloqueaste las notificaciones para esta página. Activalas desde los ajustes del navegador si querés recibir avisos.', { duracion: 6000 });
     }
   }
 
