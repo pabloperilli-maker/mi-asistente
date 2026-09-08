@@ -63,6 +63,9 @@
   var ventaProducto = document.getElementById('ventaProducto');
   var ventaProductoInfo = document.getElementById('ventaProductoInfo');
   var ventaCliente = document.getElementById('ventaCliente');
+  var ventaClienteNuevo = document.getElementById('ventaClienteNuevo');
+  var ventaClienteNuevoNombre = document.getElementById('ventaClienteNuevoNombre');
+  var ventaClienteNuevoTelefono = document.getElementById('ventaClienteNuevoTelefono');
   var ventaPrecio = document.getElementById('ventaPrecio');
   var ventaCuotasRow = document.getElementById('ventaCuotasRow');
   var resumenTotal = document.getElementById('resumenTotal');
@@ -450,7 +453,17 @@
       opt.textContent = c.nombre;
       ventaCliente.appendChild(opt);
     });
+    var optNuevo = document.createElement('option');
+    optNuevo.value = '__nuevo__';
+    optNuevo.textContent = '+ Cliente nuevo';
+    ventaCliente.appendChild(optNuevo);
   }
+
+  ventaCliente.addEventListener('change', function () {
+    var esNuevo = ventaCliente.value === '__nuevo__';
+    ventaClienteNuevo.hidden = !esNuevo;
+    if (esNuevo) ventaClienteNuevoNombre.focus();
+  });
 
   function actualizarInfoProducto() {
     var p = productos.find(function (x) { return x.id === ventaProducto.value; });
@@ -500,6 +513,9 @@
   function abrirNuevaVenta() {
     ventaError.hidden = true;
     poblarSelectsVenta();
+    ventaClienteNuevo.hidden = true;
+    ventaClienteNuevoNombre.value = '';
+    ventaClienteNuevoTelefono.value = '';
     cuotasSeleccionadas = 3;
     ventaCuotasRow.querySelectorAll('.cuota-pill').forEach(function (p) { p.classList.toggle('selected', p.dataset.n === '3'); });
     if (productos.filter(function (p) { return p.stock > 0; }).length === 0) {
@@ -512,45 +528,69 @@
   btnConfirmarVenta.addEventListener('click', function () {
     ventaError.hidden = true;
     var p = productos.find(function (x) { return x.id === ventaProducto.value; });
-    var c = clientes.find(function (x) { return x.id === ventaCliente.value; });
     var total = parseFloat(ventaPrecio.value) || 0;
     if (!p) { ventaError.textContent = 'Elegí un producto con stock disponible.'; ventaError.hidden = false; return; }
-    if (!c) { ventaError.textContent = 'Elegí (o creá) un cliente.'; ventaError.hidden = false; return; }
     if (!(total > 0)) { ventaError.textContent = 'Ingresá un precio de venta válido.'; ventaError.hidden = false; return; }
 
-    var n = cuotasSeleccionadas;
-    var montos = montosCuotas(total, n);
-    var fechaVenta = new Date();
-    var cuotas = [];
-    for (var i = 1; i <= n; i++) {
-      var vencimiento = new Date(fechaVenta);
-      vencimiento.setDate(vencimiento.getDate() + DIAS_ENTRE_CUOTAS * i);
-      cuotas.push({
-        numero: i,
-        monto: montos[i - 1],
-        montoPagado: 0,
-        fechaVencimiento: vencimiento.toISOString()
-      });
+    var esClienteNuevo = ventaCliente.value === '__nuevo__';
+    var c = esClienteNuevo ? null : clientes.find(function (x) { return x.id === ventaCliente.value; });
+    var nombreNuevo = esClienteNuevo ? ventaClienteNuevoNombre.value.trim() : '';
+    if (esClienteNuevo && !nombreNuevo) {
+      ventaError.textContent = 'Ingresá el nombre del cliente nuevo.';
+      ventaError.hidden = false;
+      ventaClienteNuevoNombre.focus();
+      return;
     }
-    var ventaId = nuevoId();
-    var venta = {
-      clienteId: c.id,
-      clienteNombre: c.nombre,
-      productoId: p.id,
-      productoNombre: p.nombre,
-      precioVenta: total,
-      costoUnitario: p.costo,
-      cantidadCuotas: n,
-      cuotas: cuotas,
-      fechaVenta: fechaVenta.toISOString()
-    };
-    window.FB.registrarVenta(currentUid, ventaId, venta, p.id, Math.max(0, p.stock - 1)).then(function () {
-      mostrarToast('Venta registrada: ' + p.nombre + ' a ' + c.nombre);
-      ventaPrecio.value = '';
-      mostrarVista('view-dashboard');
+    if (!esClienteNuevo && !c) { ventaError.textContent = 'Elegí (o creá) un cliente.'; ventaError.hidden = false; return; }
+
+    var promesaCliente = esClienteNuevo
+      ? (function () {
+          var idNuevo = nuevoId();
+          var datosNuevo = { nombre: nombreNuevo, telefono: ventaClienteNuevoTelefono.value.trim(), createdAt: new Date().toISOString() };
+          return window.FB.setDoc(window.FB.documento(currentUid, 'clientes', idNuevo), datosNuevo).then(function () {
+            return { id: idNuevo, nombre: nombreNuevo };
+          });
+        })()
+      : Promise.resolve({ id: c.id, nombre: c.nombre });
+
+    btnConfirmarVenta.disabled = true;
+    promesaCliente.then(function (cliente) {
+      var n = cuotasSeleccionadas;
+      var montos = montosCuotas(total, n);
+      var fechaVenta = new Date();
+      var cuotas = [];
+      for (var i = 1; i <= n; i++) {
+        var vencimiento = new Date(fechaVenta);
+        vencimiento.setDate(vencimiento.getDate() + DIAS_ENTRE_CUOTAS * i);
+        cuotas.push({
+          numero: i,
+          monto: montos[i - 1],
+          montoPagado: 0,
+          fechaVencimiento: vencimiento.toISOString()
+        });
+      }
+      var ventaId = nuevoId();
+      var venta = {
+        clienteId: cliente.id,
+        clienteNombre: cliente.nombre,
+        productoId: p.id,
+        productoNombre: p.nombre,
+        precioVenta: total,
+        costoUnitario: p.costo,
+        cantidadCuotas: n,
+        cuotas: cuotas,
+        fechaVenta: fechaVenta.toISOString()
+      };
+      return window.FB.registrarVenta(currentUid, ventaId, venta, p.id, Math.max(0, p.stock - 1)).then(function () {
+        mostrarToast('Venta registrada: ' + p.nombre + ' a ' + cliente.nombre);
+        ventaPrecio.value = '';
+        mostrarVista('view-dashboard');
+      });
     }).catch(function (err) {
       ventaError.textContent = 'No se pudo guardar la venta: ' + ((err && err.message) || 'revisá tu conexión.');
       ventaError.hidden = false;
+    }).then(function () {
+      btnConfirmarVenta.disabled = false;
     });
   });
 
