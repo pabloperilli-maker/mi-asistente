@@ -1,0 +1,15 @@
+{
+  "name": "Perfumería Mora",
+  "short_name": "Perfumería",
+  "description": "Cuenta corriente, stock y ventas de la perfumería",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef2f9",
+  "theme_color": "#4a7cf6",
+  "orientation": "portrait",
+  "lang": "es-AR",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

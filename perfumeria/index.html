@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#4a7cf6" />
+<title>Perfumería Mora</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <h1>Perfumería Mora</h1>
+    <p class="auth-sub">Iniciá sesión para ver la cuenta corriente y el stock.</p>
+    <input id="authEmail" type="email" placeholder="Correo electrónico" autocomplete="username" />
+    <input id="authPassword" type="password" placeholder="Contraseña" autocomplete="current-password" />
+    <p id="authError" class="auth-error" hidden></p>
+    <button id="authLoginBtn" class="btn btn-primary auth-btn" type="button">Iniciar sesión</button>
+    <button id="authSignupBtn" class="btn btn-secondary auth-btn" type="button">Crear cuenta</button>
+  </div>
+</div>
+
+<div class="app" id="appRoot" hidden>
+  <div class="user-bar">
+    <span id="userEmailLabel"></span>
+    <button id="logoutBtn" type="button">Cerrar sesión</button>
+  </div>
+
+  <!-- ===== Dashboard ===== -->
+  <section class="view" id="view-dashboard">
+    <div class="view-header">
+      <div>
+        <div class="brand-label">Perfumería Mora</div>
+        <div class="view-title">Hola, buen día</div>
+      </div>
+      <button id="btnNotificaciones" class="avatar-btn" type="button" aria-label="Notificaciones">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="notifBadge" class="badge-dot" hidden></span>
+      </button>
+    </div>
+
+    <div class="stats-grid">
+      <div class="card stat-card">
+        <div class="stat-label">Ganancia del mes</div>
+        <div class="stat-value ok" id="statGananciaMes">$0</div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-label">Ventas de hoy</div>
+        <div class="stat-value" id="statVentasHoy">$0</div>
+      </div>
+    </div>
+
+    <div class="card row-card">
+      <div>
+        <div class="stat-label">Saldo pendiente de cobro</div>
+        <div class="stat-value" id="statSaldoPendiente">$0</div>
+      </div>
+      <div class="stat-label" id="statCuotasActivas" style="text-align:right;">0 cuotas activas</div>
+    </div>
+
+    <div class="section-title">Atención</div>
+    <div class="card list-card" id="dashAlertas"></div>
+    <div class="empty-state" id="dashSinAlertas" hidden>Por ahora no hay nada urgente.</div>
+
+    <button id="btnNuevaVentaDash" class="btn-block btn-primary-block" type="button">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nueva venta
+    </button>
+  </section>
+
+  <!-- ===== Clientes ===== -->
+  <section class="view" id="view-clientes" hidden>
+    <div class="view-header">
+      <div class="view-title">Clientes</div>
+      <button id="btnNuevoCliente" class="circle-btn" type="button">+</button>
+    </div>
+    <div class="search">
+      <svg class="icon muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="buscarCliente" placeholder="Buscar cliente..." />
+    </div>
+    <div class="legend">
+      <span><span class="dot ok"></span>Al día</span>
+      <span><span class="dot warn"></span>Cuota próxima</span>
+      <span><span class="dot danger"></span>Vencido</span>
+    </div>
+    <div class="card list-card" id="listaClientes"></div>
+    <div class="empty-state" id="clientesEmpty" hidden>Todavía no cargaste clientes.</div>
+  </section>
+
+  <!-- ===== Detalle de cliente ===== -->
+  <section class="view" id="view-cliente-detalle" hidden>
+    <div class="view-header">
+      <button class="icon-back" id="btnVolverClientes" type="button">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <div>
+        <div class="view-title" id="detalleClienteNombre">Cliente</div>
+        <div class="stat-label" id="detalleClienteTelefono"></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:18px; margin-bottom:16px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+        <div class="stat-label">Saldo pendiente</div>
+        <span class="pill" id="detalleEstadoPill"></span>
+      </div>
+      <div class="stat-value" style="font-size:28px;" id="detalleSaldo">$0</div>
+      <button id="btnCompartirEstado" class="btn-block btn-soft-block" type="button" style="margin-top:14px;">
+        <svg class="icon" style="width:17px;height:17px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+        Compartir estado de cuenta
+      </button>
+    </div>
+
+    <div class="section-title">Compras</div>
+    <div id="detalleCompras"></div>
+    <div class="empty-state" id="detalleSinCompras" hidden>Este cliente todavía no tiene compras.</div>
+  </section>
+
+  <!-- ===== Nueva venta ===== -->
+  <section class="view" id="view-nueva-venta" hidden>
+    <div class="view-header">
+      <button class="icon-back" id="btnCerrarNuevaVenta" type="button">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <div class="view-title">Nueva venta</div>
+    </div>
+
+    <div class="field-label">Producto</div>
+    <select id="ventaProducto" class="select-field"></select>
+    <div class="stat-label" id="ventaProductoInfo" style="margin:6px 0 18px;"></div>
+
+    <div class="field-label">Cliente</div>
+    <select id="ventaCliente" class="select-field" style="margin-bottom:18px;"></select>
+
+    <div class="field-label">Precio de venta</div>
+    <div class="card" style="padding:14px 16px; margin-bottom:18px; display:flex; align-items:center; gap:6px;">
+      <span style="font-size:20px; color:var(--text-muted);">$</span>
+      <input id="ventaPrecio" type="number" inputmode="decimal" style="border:none; outline:none; font-size:20px; font-weight:700; width:100%; background:transparent; color:var(--text);" />
+    </div>
+
+    <div class="field-label">Cantidad de cuotas</div>
+    <div class="cuotas-row" id="ventaCuotasRow">
+      <div class="cuota-pill" data-n="1">1</div>
+      <div class="cuota-pill" data-n="2">2</div>
+      <div class="cuota-pill selected" data-n="3">3</div>
+      <div class="cuota-pill" data-n="4">4</div>
+      <div class="cuota-pill" data-n="6">6</div>
+    </div>
+
+    <div class="card" style="padding:16px; margin:18px 0 22px; background:var(--ok-bg);">
+      <div class="resumen-row"><span>Saldo total</span><span id="resumenTotal" style="font-weight:700;">$0</span></div>
+      <div class="resumen-row"><span id="resumenCuotasLabel">3 cuotas de</span><span id="resumenCuotaMonto" style="font-weight:700;">$0</span></div>
+      <div class="resumen-row"><span>Primera cuota</span><span id="resumenPrimeraFecha" style="font-weight:700;">-</span></div>
+    </div>
+
+    <p id="ventaError" class="auth-error" hidden></p>
+    <button id="btnConfirmarVenta" class="btn-block btn-primary-block" type="button">Confirmar venta</button>
+  </section>
+
+  <!-- ===== Stock ===== -->
+  <section class="view" id="view-stock" hidden>
+    <div class="view-header">
+      <div class="view-title">Stock</div>
+      <button id="btnNuevoProducto" class="circle-btn" type="button">+</button>
+    </div>
+    <div class="search">
+      <svg class="icon muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="buscarProducto" placeholder="Buscar producto..." />
+    </div>
+    <div class="card list-card" id="listaProductos"></div>
+    <div class="empty-state" id="productosEmpty" hidden>Todavía no cargaste productos.</div>
+  </section>
+
+  <!-- ===== Notificaciones ===== -->
+  <section class="view" id="view-notificaciones" hidden>
+    <div class="view-header">
+      <button class="icon-back" id="btnVolverDashboard" type="button">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      </button>
+      <div class="view-title">Notificaciones</div>
+    </div>
+    <div class="section-title">Cuotas por vencer</div>
+    <div class="card list-card" id="notifCuotas"></div>
+    <div class="empty-state" id="notifCuotasEmpty" hidden>No hay cuotas por vencer.</div>
+    <div class="section-title">Stock bajo</div>
+    <div class="card list-card" id="notifStock"></div>
+    <div class="empty-state" id="notifStockEmpty" hidden>El stock está bien.</div>
+  </section>
+
+  <!-- ===== Reportes ===== -->
+  <section class="view" id="view-reportes" hidden>
+    <div class="view-header">
+      <div class="view-title">Reportes</div>
+    </div>
+    <div class="segmented" id="reportesSegmentado">
+      <div class="segment" data-rango="hoy">Hoy</div>
+      <div class="segment" data-rango="semana">Semana</div>
+      <div class="segment selected" data-rango="mes">Mes</div>
+    </div>
+    <div class="stats-grid-3">
+      <div class="card stat-card small">
+        <div class="stat-label">Ventas</div>
+        <div class="stat-value" id="repVentas">$0</div>
+      </div>
+      <div class="card stat-card small">
+        <div class="stat-label">Ganancia</div>
+        <div class="stat-value ok" id="repGanancia">$0</div>
+      </div>
+      <div class="card stat-card small">
+        <div class="stat-label">Cuotas cobradas</div>
+        <div class="stat-value" id="repCuotasCobradas">$0</div>
+      </div>
+    </div>
+    <div class="card" style="padding:18px; margin-bottom:20px;">
+      <div class="field-label" style="margin-bottom:16px;">Ventas por día (últimos 7 días)</div>
+      <div class="bars" id="repBars"></div>
+    </div>
+    <div class="section-title">Productos más vendidos</div>
+    <div class="card list-card" id="repTopProductos"></div>
+    <div class="empty-state" id="repEmpty" hidden>Todavía no hay ventas registradas.</div>
+  </section>
+
+  <div class="tabbar">
+    <button class="tab" data-view="view-dashboard">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+      Inicio
+    </button>
+    <button class="tab" data-view="view-clientes">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Clientes
+    </button>
+    <button class="tab" data-view="view-stock">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+      Stock
+    </button>
+    <button class="tab" data-view="view-reportes">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Reportes
+    </button>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<div id="modalOverlay" class="modal-overlay" hidden>
+  <div class="modal-card" id="modalCard"></div>
+</div>
+
+<script type="module" src="firebase-init.js"></script>
+<script src="app.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
