@@ -131,7 +131,7 @@
       d5.setDate(d5.getDate() + parseInt(m[1], 10));
       return { span: m, dt: d5 };
     }
-    if ((m = norm.match(new RegExp('\\bel\\s+(\\d{1,2})\\s+de\\s+(' + LETRAS_MESES + ')(?:\\s+de\\s+(\\d{4}))?\\b')))) {
+    if ((m = norm.match(new RegExp('\\b(?:el\\s+)?(\\d{1,2})\\s+de\\s+(' + LETRAS_MESES + ')(?:\\s+de\\s+(\\d{4}))?\\b')))) {
       var dia1 = parseInt(m[1], 10);
       var mes1 = MESES[m[2]];
       var anio1 = m[3] ? parseInt(m[3], 10) : now.getFullYear();
