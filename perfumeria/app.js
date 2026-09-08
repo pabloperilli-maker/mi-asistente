@@ -385,20 +385,29 @@
       '<div class="stat-label" style="margin-bottom:12px;">Restan ' + formatMoney(restante) + ' de ' + formatMoney(cuota.monto) + '</div>' +
       '<div class="field-label">Monto a registrar</div>' +
       '<input id="mPagoMonto" type="number" inputmode="decimal" />' +
+      '<p id="mPagoError" class="auth-error" hidden></p>' +
       '<div class="modal-buttons">' +
         '<button id="mPagoCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
         '<button id="mPagoGuardar" class="btn-block btn-primary-block" type="button">Registrar</button>' +
       '</div>',
       function (root) {
         var input = root.querySelector('#mPagoMonto');
+        var error = root.querySelector('#mPagoError');
         input.value = restante;
         root.querySelector('#mPagoCancelar').addEventListener('click', cerrarModal);
         root.querySelector('#mPagoGuardar').addEventListener('click', function () {
           var monto = parseFloat(input.value);
           if (!(monto > 0)) { input.focus(); return; }
+          if (monto > restante + 0.01) {
+            error.textContent = 'No puede ser mayor que lo que falta (' + formatMoney(restante) + ').';
+            error.hidden = false;
+            input.focus();
+            return;
+          }
           var nuevasCuotas = venta.cuotas.map(function (cc) {
             if (cc.numero !== cuota.numero) return cc;
-            return Object.assign({}, cc, { montoPagado: Math.min(cc.monto, cc.montoPagado + monto) });
+            var pagos = (cc.pagos || []).concat([{ monto: monto, fecha: new Date().toISOString() }]);
+            return Object.assign({}, cc, { montoPagado: Math.min(cc.monto, cc.montoPagado + monto), pagos: pagos });
           });
           window.FB.updateDoc(window.FB.documento(currentUid, 'ventas', venta.id), { cuotas: nuevasCuotas }).catch(function () {
             mostrarToast('No se pudo registrar el pago.');
@@ -459,13 +468,27 @@
   });
   ventaPrecio.addEventListener('input', actualizarResumenVenta);
 
+  // Reparte `total` en `n` cuotas enteras: todas iguales salvo la última,
+  // que se lleva el resto (para que la suma cierre siempre exacta). La
+  // usan tanto la vista previa como la confirmación, para que coincidan.
+  function montosCuotas(total, n) {
+    if (n <= 0) return [];
+    var base = Math.floor(total / n);
+    var resto = total - base * n;
+    var montos = [];
+    for (var i = 1; i <= n; i++) montos.push(base + (i === n ? resto : 0));
+    return montos;
+  }
+
   function actualizarResumenVenta() {
     var total = parseFloat(ventaPrecio.value) || 0;
     var n = cuotasSeleccionadas;
-    var montoCuota = n > 0 ? Math.round(total / n) : 0;
+    var montos = montosCuotas(total, n);
     resumenTotal.textContent = formatMoney(total);
     resumenCuotasLabel.textContent = n + ' cuota' + (n === 1 ? '' : 's') + ' de';
-    resumenCuotaMonto.textContent = formatMoney(montoCuota);
+    resumenCuotaMonto.textContent = montos.length && montos[0] !== montos[montos.length - 1]
+      ? formatMoney(montos[0]) + ' (última ' + formatMoney(montos[montos.length - 1]) + ')'
+      : formatMoney(montos[0] || 0);
     var primera = new Date();
     primera.setDate(primera.getDate() + DIAS_ENTRE_CUOTAS);
     resumenPrimeraFecha.textContent = formatFecha(primera.toISOString());
@@ -493,8 +516,7 @@
     if (!(total > 0)) { ventaError.textContent = 'Ingresá un precio de venta válido.'; ventaError.hidden = false; return; }
 
     var n = cuotasSeleccionadas;
-    var base = Math.floor(total / n);
-    var resto = total - base * n;
+    var montos = montosCuotas(total, n);
     var fechaVenta = new Date();
     var cuotas = [];
     for (var i = 1; i <= n; i++) {
@@ -502,7 +524,7 @@
       vencimiento.setDate(vencimiento.getDate() + DIAS_ENTRE_CUOTAS * i);
       cuotas.push({
         numero: i,
-        monto: base + (i === n ? resto : 0),
+        monto: montos[i - 1],
         montoPagado: 0,
         fechaVencimiento: vencimiento.toISOString()
       });
@@ -519,10 +541,9 @@
       cuotas: cuotas,
       fechaVenta: fechaVenta.toISOString()
     };
-    window.FB.setDoc(window.FB.documento(currentUid, 'ventas', ventaId), venta).catch(function () {
-      mostrarToast('No se pudo guardar la venta.');
+    window.FB.registrarVenta(currentUid, ventaId, venta, p.id, Math.max(0, p.stock - 1)).catch(function () {
+      mostrarToast('No se pudo guardar la venta. Revisá tu conexión.');
     });
-    window.FB.updateDoc(window.FB.documento(currentUid, 'productos', p.id), { stock: Math.max(0, p.stock - 1) }).catch(function () {});
 
     mostrarToast('Venta registrada: ' + p.nombre + ' a ' + c.nombre);
     ventaPrecio.value = '';
@@ -664,7 +685,7 @@
     dashSinAlertas.hidden = (vencidas.length + porVencer.length + stockBajo.length) > 0;
     dashAlertas.hidden = (vencidas.length + porVencer.length + stockBajo.length) === 0;
 
-    var totalAlertas = vencidas.length + stockBajo.length;
+    var totalAlertas = vencidas.length + porVencer.length + stockBajo.length;
     notifBadge.hidden = totalAlertas === 0;
   }
 
@@ -745,8 +766,15 @@
     var ventasRango = ventas.filter(function (v) { return new Date(v.fechaVenta) >= desde; });
     var totalVentas = ventasRango.reduce(function (acc, v) { return acc + v.precioVenta; }, 0);
     var totalGanancia = ventasRango.reduce(function (acc, v) { return acc + (v.precioVenta - v.costoUnitario); }, 0);
-    // Simplificación: total histórico cobrado en cuotas (no solo del rango elegido).
-    var cuotasCobradas = ventas.reduce(function (acc, v) { return acc + v.cuotas.reduce(function (a2, c) { return a2 + c.montoPagado; }, 0); }, 0);
+    // Suma los pagos de cuotas con fecha dentro del rango elegido (no el
+    // saldo pagado histórico), usando la fecha de cada pago individual.
+    var cuotasCobradas = ventas.reduce(function (acc, v) {
+      return acc + v.cuotas.reduce(function (a2, c) {
+        var pagos = c.pagos || [];
+        return a2 + pagos.filter(function (pg) { return new Date(pg.fecha) >= desde; })
+          .reduce(function (a3, pg) { return a3 + pg.monto; }, 0);
+      }, 0);
+    }, 0);
 
     repVentas.textContent = formatMoney(totalVentas);
     repGanancia.textContent = formatMoney(totalGanancia);

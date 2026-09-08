@@ -13,7 +13,8 @@ import {
   onSnapshot,
   setDoc,
   updateDoc,
-  deleteDoc
+  deleteDoc,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -46,7 +47,16 @@ window.FB = {
   onColeccionSnapshot: function (uid, nombre, cb) { return onSnapshot(coleccion(uid, nombre), cb); },
   setDoc: setDoc,
   updateDoc: updateDoc,
-  deleteDoc: deleteDoc
+  deleteDoc: deleteDoc,
+  // Guarda la venta y descuenta el stock en una sola operación atómica:
+  // si una parte falla, no se aplica ninguna (evita que stock y ventas
+  // queden desincronizados).
+  registrarVenta: function (uid, ventaId, venta, productoId, nuevoStock) {
+    var batch = writeBatch(db);
+    batch.set(documento(uid, 'ventas', ventaId), venta);
+    batch.update(documento(uid, 'productos', productoId), { stock: nuevoStock });
+    return batch.commit();
+  }
 };
 
 window.dispatchEvent(new Event('firebase-ready'));
