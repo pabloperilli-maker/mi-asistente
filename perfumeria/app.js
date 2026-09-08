@@ -78,6 +78,7 @@
   var productosEmpty = document.getElementById('productosEmpty');
   var buscarProducto = document.getElementById('buscarProducto');
   var btnNuevoProducto = document.getElementById('btnNuevoProducto');
+  var btnImportarProductos = document.getElementById('btnImportarProductos');
 
   // --- Elementos: notificaciones ---
   var notifCuotas = document.getElementById('notifCuotas');
@@ -423,7 +424,7 @@
     var c = clientes.find(function (x) { return x.id === clienteSeleccionadoId; });
     if (!c) return;
     var saldo = saldoCliente(c.id);
-    var texto = 'Hola ' + c.nombre + '! Te paso tu estado de cuenta en Perfumería Mora: saldo pendiente ' + formatMoney(saldo) + '.';
+    var texto = 'Hola ' + c.nombre + '! Te paso tu estado de cuenta en Ambaria Fragancias: saldo pendiente ' + formatMoney(saldo) + '.';
     if (navigator.share) {
       navigator.share({ text: texto }).catch(function () {});
     } else {
@@ -562,7 +563,7 @@
     row.style.cursor = 'pointer';
     row.innerHTML =
       '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;">' +
-        '<div style="font-size:14.5px; font-weight:600;">' + escapeHtml(p.nombre) + '</div>' +
+        '<div style="font-size:14.5px; font-weight:600;">' + escapeHtml(p.nombre) + (p.codigo ? ' <span style="font-weight:400; color:var(--text-muted); font-size:12.5px;">#' + escapeHtml(p.codigo) + '</span>' : '') + '</div>' +
         '<span class="pill ' + estado + '">' + escapeHtml(textoStock) + '</span>' +
       '</div>' +
       '<div class="stat-label">Costo ' + formatMoney(p.costo) + ' · Venta ' + formatMoney(p.precioVenta) + ' · Ganancia ' + formatMoney(ganancia) + '</div>';
@@ -587,6 +588,8 @@
       '<h3>' + (esEdicion ? 'Editar producto' : 'Nuevo producto') + '</h3>' +
       '<div class="field-label">Nombre</div>' +
       '<input id="mProdNombre" type="text" placeholder="Ej: Chanel N°5 100ml" />' +
+      '<div class="field-label">Código (opcional)</div>' +
+      '<input id="mProdCodigo" type="text" placeholder="Ej: 743080" />' +
       '<div class="field-label">Costo</div>' +
       '<input id="mProdCosto" type="number" inputmode="decimal" />' +
       '<div class="field-label">Precio de venta</div>' +
@@ -602,6 +605,7 @@
       function (root) {
         if (esEdicion) {
           root.querySelector('#mProdNombre').value = productoExistente.nombre || '';
+          root.querySelector('#mProdCodigo').value = productoExistente.codigo || '';
           root.querySelector('#mProdCosto').value = productoExistente.costo || 0;
           root.querySelector('#mProdPrecio').value = productoExistente.precioVenta || 0;
           root.querySelector('#mProdStock').value = productoExistente.stock || 0;
@@ -615,6 +619,7 @@
           if (!nombre) { root.querySelector('#mProdNombre').focus(); return; }
           var datos = {
             nombre: nombre,
+            codigo: root.querySelector('#mProdCodigo').value.trim(),
             costo: parseFloat(root.querySelector('#mProdCosto').value) || 0,
             precioVenta: parseFloat(root.querySelector('#mProdPrecio').value) || 0,
             stock: parseInt(root.querySelector('#mProdStock').value, 10) || 0,
@@ -631,6 +636,83 @@
     );
   }
   btnNuevoProducto.addEventListener('click', function () { formularioProducto(null); });
+
+  // Carga masiva de productos: una línea por producto, campos separados
+  // por tabulador o "|" (nombre, código, cantidad, costo, precio de venta).
+  var IMPORTAR_EJEMPLO = [
+    'ARMAF CLUB DE NUIT IMPERIALE EDP FEM 105ML(169)|743080|2|59815|84000',
+    'AL HARAMAIN BELLE FEM 75ML(438)|750180|2|40070|57000',
+    'LATTAFA NICHE E.ZIKRA EDP 100ML(985)UNISEX|765286|2|61830|87000',
+    'LATTAFA NICHE E.ANTIQUE EDP 100ML(293)UNISEX|765297|2|57000|80000',
+    'ARMAF LE PARFAIT AZURE FEM EDP 100ML(496)|763320|1|50545|71000',
+    'LOEWE SOLO ELIXIR ELLA EDP FEM 100ML(051)|771430|1|335882|371000',
+    'TOM FORD CAFE ROSE EDP FEM 100ML(599)|764263|1|289132|351000',
+    'YSL LIBRE FLORALE EDP FEM 90ML(701)|771105|1|205300|288000',
+    'DIOR SAUVAGE EDP MAS 100ML(247)|690856|1|176290|217000',
+    'TESTER CHANEL ALLURE EDP FEM 100ML|502646|1|169840|238000',
+    'TESTER CK BE 100ML(588) UNISEX|750337|1|34400|79000',
+    'MOSCHINO UOMO 125ML(106)|673396|1|49740|80000',
+    'ISSEY MIYAKE INTENSE MAS 125ML(018)|172649|1|63440|89000',
+    'ELIE SAAB EDP FEM 90ML(893)|569042|1|100520|141000',
+    'AZZARO THE MOST WANTED INTENSE EDP MAS 100ML(307)|729185|1|127920|180000'
+  ].join('\n');
+
+  function parsearLineaProducto(linea) {
+    var partes = linea.split(/\t|\|/).map(function (s) { return s.trim(); });
+    if (partes.length < 5 || !partes[0]) return null;
+    var cantidad = parseInt(partes[2], 10);
+    var costo = parseFloat(partes[3]);
+    var precioVenta = parseFloat(partes[4]);
+    if (!(cantidad >= 0) || !(costo >= 0) || !(precioVenta >= 0)) return null;
+    return {
+      nombre: partes[0],
+      codigo: partes[1] || '',
+      stock: cantidad,
+      costo: costo,
+      precioVenta: precioVenta,
+      stockMinimo: 3
+    };
+  }
+
+  function formularioImportarProductos() {
+    abrirModal(
+      '<h3>Importar productos</h3>' +
+      '<div class="stat-label" style="margin-bottom:12px;">Una línea por producto: nombre, código, cantidad, costo y precio de venta (separados por tabulador o "|").</div>' +
+      '<textarea id="mImpTexto" rows="10" style="width:100%; font-family:monospace; font-size:12.5px; padding:10px; border-radius:10px; border:1px solid var(--border); resize:vertical;"></textarea>' +
+      '<p id="mImpError" class="auth-error" hidden></p>' +
+      '<div class="modal-buttons">' +
+        '<button id="mImpCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
+        '<button id="mImpGuardar" class="btn-block btn-primary-block" type="button">Importar</button>' +
+      '</div>',
+      function (root) {
+        var textarea = root.querySelector('#mImpTexto');
+        var error = root.querySelector('#mImpError');
+        textarea.value = IMPORTAR_EJEMPLO;
+        root.querySelector('#mImpCancelar').addEventListener('click', cerrarModal);
+        root.querySelector('#mImpGuardar').addEventListener('click', function () {
+          var lineas = textarea.value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+          var items = [];
+          var invalidas = 0;
+          lineas.forEach(function (linea) {
+            var datos = parsearLineaProducto(linea);
+            if (!datos) { invalidas++; return; }
+            items.push({ id: nuevoId(), datos: datos });
+          });
+          if (items.length === 0) {
+            error.textContent = 'No se encontró ningún producto válido para importar.';
+            error.hidden = false;
+            return;
+          }
+          window.FB.importarProductos(currentUid, items).catch(function () {
+            mostrarToast('No se pudieron importar los productos. Revisá tu conexión.');
+          });
+          cerrarModal();
+          mostrarToast(items.length + ' producto' + (items.length === 1 ? '' : 's') + ' importado' + (items.length === 1 ? '' : 's') + (invalidas ? ' (' + invalidas + ' línea' + (invalidas === 1 ? '' : 's') + ' inválida' + (invalidas === 1 ? '' : 's') + ' se ignoró)' : ''));
+        });
+      }
+    );
+  }
+  btnImportarProductos.addEventListener('click', formularioImportarProductos);
 
   // ===================== DASHBOARD Y NOTIFICACIONES =====================
   function cuotasPendientesTodas() {

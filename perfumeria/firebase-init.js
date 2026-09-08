@@ -56,6 +56,14 @@ window.FB = {
     batch.set(documento(uid, 'ventas', ventaId), venta);
     batch.update(documento(uid, 'productos', productoId), { stock: nuevoStock });
     return batch.commit();
+  },
+  // Carga varios productos de una sola vez (alta de mercadería nueva).
+  importarProductos: function (uid, items) {
+    var batch = writeBatch(db);
+    items.forEach(function (item) {
+      batch.set(documento(uid, 'productos', item.id), item.datos);
+    });
+    return batch.commit();
   }
 };
 

@@ -1,7 +1,7 @@
 {
-  "name": "Perfumería Mora",
-  "short_name": "Perfumería",
-  "description": "Cuenta corriente, stock y ventas de la perfumería",
+  "name": "Ambaria Fragancias",
+  "short_name": "Ambaria",
+  "description": "Cuenta corriente, stock y ventas de Ambaria Fragancias",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
