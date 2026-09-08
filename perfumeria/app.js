@@ -465,14 +465,16 @@
     if (esNuevo) ventaClienteNuevoNombre.focus();
   });
 
-  function actualizarInfoProducto() {
+  function actualizarInfoProducto(forzarPrecio) {
     var p = productos.find(function (x) { return x.id === ventaProducto.value; });
     if (!p) { ventaProductoInfo.textContent = ''; return; }
     ventaProductoInfo.textContent = 'Costo ' + formatMoney(p.costo) + ' · Precio sugerido ' + formatMoney(p.precioVenta);
-    if (!ventaPrecio.value || parseFloat(ventaPrecio.value) === 0) ventaPrecio.value = p.precioVenta;
+    if (forzarPrecio || !ventaPrecio.value || parseFloat(ventaPrecio.value) === 0) ventaPrecio.value = p.precioVenta;
     actualizarResumenVenta();
   }
-  ventaProducto.addEventListener('change', actualizarInfoProducto);
+  // Al cambiar de producto se pisa el precio con el sugerido del nuevo
+  // producto (si no, quedaba pegado el precio del que estaba antes).
+  ventaProducto.addEventListener('change', function () { actualizarInfoProducto(true); });
 
   ventaCuotasRow.querySelectorAll('.cuota-pill').forEach(function (pill) {
     pill.addEventListener('click', function () {
