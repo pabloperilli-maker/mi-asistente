@@ -297,11 +297,12 @@
           if (!nombre) { root.querySelector('#mCliNombre').focus(); return; }
           var id = esEdicion ? clienteExistente.id : nuevoId();
           var datos = { nombre: nombre, telefono: telefono, createdAt: esEdicion ? clienteExistente.createdAt : new Date().toISOString() };
-          window.FB.setDoc(window.FB.documento(currentUid, 'clientes', id), datos).catch(function () {
-            mostrarToast('No se pudo guardar. Revisá tu conexión.');
+          window.FB.setDoc(window.FB.documento(currentUid, 'clientes', id), datos).then(function () {
+            cerrarModal();
+            mostrarToast(esEdicion ? 'Cliente actualizado' : 'Cliente agregado');
+          }).catch(function (err) {
+            mostrarToast('No se pudo guardar: ' + ((err && err.message) || 'revisá tu conexión.'));
           });
-          cerrarModal();
-          mostrarToast(esEdicion ? 'Cliente actualizado' : 'Cliente agregado');
         });
       }
     );
@@ -410,11 +411,12 @@
             var pagos = (cc.pagos || []).concat([{ monto: monto, fecha: new Date().toISOString() }]);
             return Object.assign({}, cc, { montoPagado: Math.min(cc.monto, cc.montoPagado + monto), pagos: pagos });
           });
-          window.FB.updateDoc(window.FB.documento(currentUid, 'ventas', venta.id), { cuotas: nuevasCuotas }).catch(function () {
-            mostrarToast('No se pudo registrar el pago.');
+          window.FB.updateDoc(window.FB.documento(currentUid, 'ventas', venta.id), { cuotas: nuevasCuotas }).then(function () {
+            cerrarModal();
+            mostrarToast('Pago registrado');
+          }).catch(function (err) {
+            mostrarToast('No se pudo registrar el pago: ' + ((err && err.message) || 'revisá tu conexión.'));
           });
-          cerrarModal();
-          mostrarToast('Pago registrado');
         });
       }
     );
@@ -542,13 +544,14 @@
       cuotas: cuotas,
       fechaVenta: fechaVenta.toISOString()
     };
-    window.FB.registrarVenta(currentUid, ventaId, venta, p.id, Math.max(0, p.stock - 1)).catch(function () {
-      mostrarToast('No se pudo guardar la venta. Revisá tu conexión.');
+    window.FB.registrarVenta(currentUid, ventaId, venta, p.id, Math.max(0, p.stock - 1)).then(function () {
+      mostrarToast('Venta registrada: ' + p.nombre + ' a ' + c.nombre);
+      ventaPrecio.value = '';
+      mostrarVista('view-dashboard');
+    }).catch(function (err) {
+      ventaError.textContent = 'No se pudo guardar la venta: ' + ((err && err.message) || 'revisá tu conexión.');
+      ventaError.hidden = false;
     });
-
-    mostrarToast('Venta registrada: ' + p.nombre + ' a ' + c.nombre);
-    ventaPrecio.value = '';
-    mostrarVista('view-dashboard');
   });
 
   // ===================== STOCK =====================
@@ -626,11 +629,12 @@
             stockMinimo: parseInt(root.querySelector('#mProdMinimo').value, 10) || 3
           };
           var id = esEdicion ? productoExistente.id : nuevoId();
-          window.FB.setDoc(window.FB.documento(currentUid, 'productos', id), datos).catch(function () {
-            mostrarToast('No se pudo guardar. Revisá tu conexión.');
+          window.FB.setDoc(window.FB.documento(currentUid, 'productos', id), datos).then(function () {
+            cerrarModal();
+            mostrarToast(esEdicion ? 'Producto actualizado' : 'Producto agregado');
+          }).catch(function (err) {
+            mostrarToast('No se pudo guardar: ' + ((err && err.message) || 'revisá tu conexión.'));
           });
-          cerrarModal();
-          mostrarToast(esEdicion ? 'Producto actualizado' : 'Producto agregado');
         });
       }
     );
@@ -703,11 +707,19 @@
             error.hidden = false;
             return;
           }
-          window.FB.importarProductos(currentUid, items).catch(function () {
-            mostrarToast('No se pudieron importar los productos. Revisá tu conexión.');
+          error.hidden = true;
+          var btnGuardar = root.querySelector('#mImpGuardar');
+          btnGuardar.disabled = true;
+          btnGuardar.textContent = 'Importando...';
+          window.FB.importarProductos(currentUid, items).then(function () {
+            cerrarModal();
+            mostrarToast(items.length + ' producto' + (items.length === 1 ? '' : 's') + ' importado' + (items.length === 1 ? '' : 's') + (invalidas ? ' (' + invalidas + ' línea' + (invalidas === 1 ? '' : 's') + ' inválida' + (invalidas === 1 ? '' : 's') + ' se ignoró)' : ''));
+          }).catch(function (err) {
+            btnGuardar.disabled = false;
+            btnGuardar.textContent = 'Importar';
+            error.textContent = 'No se pudo importar: ' + ((err && err.message) || 'revisá tu conexión.');
+            error.hidden = false;
           });
-          cerrarModal();
-          mostrarToast(items.length + ' producto' + (items.length === 1 ? '' : 's') + ' importado' + (items.length === 1 ? '' : 's') + (invalidas ? ' (' + invalidas + ' línea' + (invalidas === 1 ? '' : 's') + ' inválida' + (invalidas === 1 ? '' : 's') + ' se ignoró)' : ''));
         });
       }
     );
