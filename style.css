@@ -215,18 +215,24 @@ html, body {
 
 .task-card {
   background: var(--card-bg);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   padding: 14px 14px;
   display: flex;
   align-items: center;
   gap: 12px;
   box-shadow: 0 2px 8px rgba(20, 30, 60, 0.04);
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition: opacity 0.25s ease, transform 0.25s ease, background-color 0.6s ease, border-color 0.6s ease;
 }
 .task-card.leaving { opacity: 0; transform: translateX(20px); }
 
 .task-card.vencida { border: 1px solid #f6c9c4; background: #fff7f6; }
 .task-card.porvencer { border: 1px solid #fbdca0; background: #fffaf0; }
+
+.task-card.highlighted {
+  background-color: var(--blue-soft) !important;
+  border-color: var(--blue) !important;
+}
 
 .check-btn {
   flex-shrink: 0;

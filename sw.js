@@ -1,4 +1,4 @@
-const CACHE = 'agenda-voz-v5';
+const CACHE = 'agenda-voz-v6';
 const ASSETS = [
   './',
   './index.html',
