@@ -372,6 +372,7 @@
   function crearTaskCard(t) {
     var card = document.createElement('div');
     card.className = 'task-card';
+    card.setAttribute('data-task-id', t.id);
     var estado = estadoTarea(t);
     if (estado === 'vencida') card.classList.add('vencida');
     if (estado === 'porvencer') card.classList.add('porvencer');
@@ -603,11 +604,13 @@
     var mes = calendarMonth.getMonth();
     calMonthLabel.textContent = MESES_LARGO[mes] + ' ' + anio;
 
-    var diasConTarea = {};
+    var tareasPorDia = {};
     tasks.forEach(function (t) {
       if (t.done || !t.dueDate) return;
       var d = new Date(t.dueDate);
-      if (d.getFullYear() === anio && d.getMonth() === mes) diasConTarea[d.getDate()] = true;
+      if (d.getFullYear() === anio && d.getMonth() === mes) {
+        (tareasPorDia[d.getDate()] = tareasPorDia[d.getDate()] || []).push(t.id);
+      }
     });
 
     var hoy = new Date();
@@ -622,11 +625,31 @@
     for (var dia = 1; dia <= diasEnMes; dia++) {
       var celda = document.createElement('div');
       celda.className = 'calendar-day';
-      if (diasConTarea[dia]) celda.classList.add('has-tasks');
+      var idsDelDia = tareasPorDia[dia];
+      if (idsDelDia) {
+        celda.classList.add('has-tasks');
+        celda.addEventListener('click', crearHandlerDiaCalendario(idsDelDia));
+      }
       if (esMesActual && dia === hoy.getDate()) celda.classList.add('today');
       celda.textContent = dia;
       calendarGrid.appendChild(celda);
     }
+  }
+
+  function crearHandlerDiaCalendario(ids) {
+    return function () { irATareasDelDia(ids); };
+  }
+
+  function irATareasDelDia(ids) {
+    var primero = null;
+    ids.forEach(function (id) {
+      var card = document.querySelector('.task-card[data-task-id="' + id + '"]');
+      if (!card) return;
+      if (!primero) primero = card;
+      card.classList.add('highlighted');
+      setTimeout(function () { card.classList.remove('highlighted'); }, 1600);
+    });
+    if (primero) primero.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   calPrevBtn.addEventListener('click', function () {
