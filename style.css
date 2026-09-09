@@ -348,6 +348,75 @@ html, body {
 .btn-secondary { background: #f2f4f9; color: var(--text-muted); }
 .btn-text { background: transparent; color: var(--danger); font-weight: 600; padding: 8px 6px; }
 
+/* --- Calendario --- */
+.calendar-card {
+  background: var(--card-bg);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(20, 30, 60, 0.04);
+  margin-bottom: 20px;
+}
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.calendar-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+.calendar-nav {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.calendar-nav:active { background: #f2f4f9; }
+.calendar-nav svg { width: 18px; height: 18px; }
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.calendar-weekdays span {
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13.5px;
+  color: var(--text);
+  border-radius: 50%;
+}
+.calendar-day.has-tasks {
+  background: var(--blue-soft);
+  font-weight: 600;
+}
+.calendar-day.today {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(74, 124, 246, 0.35);
+}
+
 /* --- Estados vacíos --- */
 .empty-state {
   border: 1.5px dashed #c9d2e6;
@@ -471,6 +540,7 @@ html, body {
   .mic-card { background: linear-gradient(180deg, #202a44 0%, #12141c 100%); }
   .chip { background: #262b38; color: var(--text-muted); }
   .icon-btn:active { background: #262b38; }
+  .calendar-nav:active { background: #262b38; }
   .btn-secondary { background: #262b38; }
   .task-meta .badge { background: #262b38; }
   .task-card.vencida { background: #2a1e1c; border-color: #4a2e2a; }

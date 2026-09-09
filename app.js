@@ -42,6 +42,14 @@
   var completadasCount = document.getElementById('completadasCount');
   var completadasToggle = document.getElementById('completadasToggle');
 
+  var calMonthLabel = document.getElementById('calMonthLabel');
+  var calendarGrid = document.getElementById('calendarGrid');
+  var calPrevBtn = document.getElementById('calPrevBtn');
+  var calNextBtn = document.getElementById('calNextBtn');
+  var calendarMonth = new Date();
+  calendarMonth.setDate(1);
+  calendarMonth.setHours(0, 0, 0, 0);
+
   var authScreen = document.getElementById('authScreen');
   var appRoot = document.getElementById('appRoot');
   var authEmail = document.getElementById('authEmail');
@@ -572,6 +580,8 @@
     completadasCount.textContent = completadas.length;
     completadasList.innerHTML = '';
     completadas.forEach(function (t) { completadasList.appendChild(crearCompletadaCard(t)); });
+
+    renderCalendario();
   }
 
   function renderLista(container, lista) {
@@ -581,6 +591,51 @@
 
   completadasToggle.addEventListener('click', function () {
     completadasList.hidden = !completadasList.hidden;
+  });
+
+  // --- Calendario del mes ---
+  var MESES_LARGO = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  function renderCalendario() {
+    var anio = calendarMonth.getFullYear();
+    var mes = calendarMonth.getMonth();
+    calMonthLabel.textContent = MESES_LARGO[mes] + ' ' + anio;
+
+    var diasConTarea = {};
+    tasks.forEach(function (t) {
+      if (t.done || !t.dueDate) return;
+      var d = new Date(t.dueDate);
+      if (d.getFullYear() === anio && d.getMonth() === mes) diasConTarea[d.getDate()] = true;
+    });
+
+    var hoy = new Date();
+    var esMesActual = hoy.getFullYear() === anio && hoy.getMonth() === mes;
+    var primerDiaSemana = new Date(anio, mes, 1).getDay();
+    var diasEnMes = new Date(anio, mes + 1, 0).getDate();
+
+    calendarGrid.innerHTML = '';
+    for (var i = 0; i < primerDiaSemana; i++) {
+      calendarGrid.appendChild(document.createElement('div'));
+    }
+    for (var dia = 1; dia <= diasEnMes; dia++) {
+      var celda = document.createElement('div');
+      celda.className = 'calendar-day';
+      if (diasConTarea[dia]) celda.classList.add('has-tasks');
+      if (esMesActual && dia === hoy.getDate()) celda.classList.add('today');
+      celda.textContent = dia;
+      calendarGrid.appendChild(celda);
+    }
+  }
+
+  calPrevBtn.addEventListener('click', function () {
+    calendarMonth.setMonth(calendarMonth.getMonth() - 1);
+    renderCalendario();
+  });
+  calNextBtn.addEventListener('click', function () {
+    calendarMonth.setMonth(calendarMonth.getMonth() + 1);
+    renderCalendario();
   });
 
   // --- Chequeo periódico de recordatorios ---
