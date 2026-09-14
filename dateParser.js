@@ -155,6 +155,19 @@
       }
       return { span: m, dt: candidato };
     }
+    // Dictado como "28, turno con Emilse": el número del día abre la frase,
+    // sin "el" adelante. Se excluyen las unidades típicas ("15 pesos",
+    // "20 minutos") para no confundir una cantidad con una fecha.
+    if ((m = norm.match(/^(\d{1,2})\b(?!\s*(?:de\s|pesos|dolares|mangos|rosas|flores|kilos|kilogramos|gramos|litros|unidades|cuotas|personas|dias|horas|minutos|semanas|meses|anios|veces)\b)/))) {
+      var dia4 = parseInt(m[1], 10);
+      if (dia4 >= 1 && dia4 <= 31) {
+        var candidato4 = new Date(now.getFullYear(), now.getMonth(), dia4);
+        if (candidato4 < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+          candidato4 = new Date(now.getFullYear(), now.getMonth() + 1, dia4);
+        }
+        return { span: m, dt: candidato4 };
+      }
+    }
     return null;
   }
 
