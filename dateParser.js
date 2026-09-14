@@ -112,7 +112,7 @@
     if ((m = norm.match(/\bhoy\b/))) {
       return { span: m, dt: new Date(now) };
     }
-    if ((m = norm.match(new RegExp('\\b(?:el\\s+)?(?:proximo\\s+)?(?:dia\\s+)?(' + LETRAS_DIAS + ')(?:\\s+que\\s+viene)?\\b')))) {
+    if ((m = norm.match(new RegExp('\\b(?:el\\s+)?(?:proximo\\s+)?(?:dia\\s+)?(' + LETRAS_DIAS + ')(?:\\s+(?:que\\s+viene|proximo))?\\b')))) {
       var target = DIAS.indexOf(m[1]);
       var diff0 = (target - now.getDay() + 7) % 7;
       var esProximo = /proximo|que\s+viene/.test(m[0]);
