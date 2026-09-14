@@ -89,6 +89,10 @@
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
+  function esUrgente(texto) {
+    return /\b(urgente|importante)\b/i.test(texto || '');
+  }
+
   function estadoTarea(t) {
     if (!t.dueDate) return 'normal';
     var ms = new Date(t.dueDate).getTime() - Date.now();
@@ -258,6 +262,7 @@
       dueDate: dueDate ? dueDate.toISOString() : null,
       hasTime: hasTime,
       reminder: pendingReminder || (opts.origen === 'voz' && !!dueDate),
+      urgente: esUrgente(texto),
       done: false,
       notifiedSoon: false,
       notifiedDue: false,
@@ -355,7 +360,10 @@
       notifiedDue: false
     };
     var textoLimpio = nuevoTexto.trim();
-    if (textoLimpio) cambios.text = textoLimpio;
+    if (textoLimpio) {
+      cambios.text = textoLimpio;
+      cambios.urgente = esUrgente(textoLimpio);
+    }
     editingId = null;
     window.FB.updateDoc(window.FB.taskDoc(currentUid, id), cambios).catch(function () {});
   }
@@ -376,6 +384,7 @@
     var estado = estadoTarea(t);
     if (estado === 'vencida') card.classList.add('vencida');
     if (estado === 'porvencer') card.classList.add('porvencer');
+    if (t.urgente) card.classList.add('urgente');
 
     if (editingId === t.id) {
       card.appendChild(crearFormEdicion(t));
@@ -403,9 +412,15 @@
     textEl.textContent = t.text;
     main.appendChild(textEl);
 
-    if (t.dueDate || t.reminder) {
+    if (t.dueDate || t.reminder || t.urgente) {
       var meta = document.createElement('div');
       meta.className = 'task-meta';
+      if (t.urgente) {
+        var badgeUrgente = document.createElement('span');
+        badgeUrgente.className = 'badge urgente-badge';
+        badgeUrgente.textContent = '🔴 Urgente';
+        meta.appendChild(badgeUrgente);
+      }
       if (t.dueDate) {
         var badge = document.createElement('span');
         badge.className = 'badge' + (estado === 'vencida' ? ' danger' : estado === 'porvencer' ? ' warn' : '');
@@ -556,6 +571,8 @@
     });
 
     function porFecha(a, b) {
+      var ua = a.urgente ? 1 : 0, ub = b.urgente ? 1 : 0;
+      if (ua !== ub) return ub - ua; // las urgentes van primero
       if (!a.dueDate && !b.dueDate) return 0;
       if (!a.dueDate) return -1;
       if (!b.dueDate) return 1;

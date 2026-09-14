@@ -228,6 +228,7 @@ html, body {
 
 .task-card.vencida { border: 1px solid #f6c9c4; background: #fff7f6; }
 .task-card.porvencer { border: 1px solid #fbdca0; background: #fffaf0; }
+.task-card.urgente { border-left: 4px solid var(--danger); }
 
 .task-card.highlighted {
   background-color: var(--blue-soft) !important;
@@ -277,6 +278,7 @@ html, body {
 }
 .task-meta .badge.warn { background: var(--warn-bg); color: #a86a10; }
 .task-meta .badge.danger { background: #fbe7e5; color: #b8362b; }
+.task-meta .badge.urgente-badge { background: #fbe7e5; color: #b8362b; font-weight: 700; }
 
 .task-actions {
   flex-shrink: 0;
