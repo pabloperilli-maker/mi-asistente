@@ -145,7 +145,11 @@
       var dia2 = parseInt(m[1], 10), mes2 = parseInt(m[2], 10) - 1;
       var anio2 = m[3] ? parseInt(m[3], 10) : now.getFullYear();
       if (anio2 < 100) anio2 += 2000;
-      return { span: m, dt: new Date(anio2, mes2, dia2) };
+      var fecha2 = new Date(anio2, mes2, dia2);
+      if (!m[3] && fecha2 < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+        fecha2.setFullYear(anio2 + 1);
+      }
+      return { span: m, dt: fecha2 };
     }
     if ((m = norm.match(/\bel\s+(?:dia\s+)?(\d{1,2})\b/))) {
       var dia3 = parseInt(m[1], 10);
