@@ -200,6 +200,56 @@
     <div class="empty-state" id="notifStockEmpty" hidden>El stock está bien.</div>
   </section>
 
+  <!-- ===== Gastos ===== -->
+  <section class="view" id="view-gastos" hidden>
+    <div class="view-header">
+      <div class="view-title">Gastos</div>
+      <button id="btnNuevoGasto" class="circle-btn" type="button">+</button>
+    </div>
+
+    <div class="section-title">Calculadora de precio de venta</div>
+    <div class="card" style="padding:16px; margin-bottom:20px;">
+      <div class="field-label">Costo del producto</div>
+      <input id="calcCosto" type="number" inputmode="decimal" class="select-field" placeholder="0" style="margin-bottom:14px;" />
+      <div class="field-label">Margen deseado</div>
+      <div class="segmented" id="calcMargenTipo" style="margin-bottom:12px;">
+        <div class="segment selected" data-tipo="costo">Sobre costo</div>
+        <div class="segment" data-tipo="precio">Sobre precio de venta</div>
+      </div>
+      <input id="calcMargen" type="number" inputmode="decimal" class="select-field" value="40" style="margin-bottom:16px;" />
+      <div class="resumen-row"><span>Precio de venta sugerido</span><span id="calcPrecioSugerido" style="font-weight:700; font-size:15px;">$0</span></div>
+      <div class="resumen-row"><span>Ganancia por unidad</span><span id="calcGananciaUnidad" style="font-weight:700;">$0</span></div>
+      <div class="resumen-row"><span id="calcEquivalenciaLabel">Equivale a margen sobre precio de venta</span><span id="calcEquivalencia" style="font-weight:700;">0%</span></div>
+    </div>
+
+    <div class="section-title">Rentabilidad del mes</div>
+    <div class="stats-grid-3">
+      <div class="card stat-card small">
+        <div class="stat-label">Ingresos</div>
+        <div class="stat-value" id="rentIngresos">$0</div>
+      </div>
+      <div class="card stat-card small">
+        <div class="stat-label">Gastos</div>
+        <div class="stat-value" id="rentGastos">$0</div>
+      </div>
+      <div class="card stat-card small">
+        <div class="stat-label">Rentabilidad neta</div>
+        <div class="stat-value ok" id="rentNeta">$0</div>
+      </div>
+    </div>
+    <div class="card row-card">
+      <div>
+        <div class="stat-label">Ganancia bruta de ventas</div>
+        <div class="stat-value" id="rentGananciaBruta">$0</div>
+      </div>
+      <div class="stat-label" id="rentPorcentaje" style="text-align:right;">0% de rentabilidad</div>
+    </div>
+
+    <div class="section-title">Gastos de este mes</div>
+    <div class="card list-card" id="listaGastos"></div>
+    <div class="empty-state" id="gastosEmpty" hidden>Todavía no cargaste gastos este mes.</div>
+  </section>
+
   <!-- ===== Reportes ===== -->
   <section class="view" id="view-reportes" hidden>
     <div class="view-header">
@@ -249,6 +299,10 @@
     <button class="tab" data-view="view-reportes">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       Reportes
+    </button>
+    <button class="tab" data-view="view-gastos">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+      Gastos
     </button>
   </div>
 </div>

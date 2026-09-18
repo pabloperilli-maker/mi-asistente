@@ -9,6 +9,8 @@
   var clientes = [];
   var productos = [];
   var ventas = [];
+  var gastos = [];
+  var GASTO_CATEGORIAS = ['Alquiler', 'Sueldos', 'Servicios', 'Insumos', 'Marketing', 'Impuestos', 'Otro'];
   var unsubs = [];
   var appIniciada = false;
   var vistaActual = 'view-dashboard';
@@ -89,6 +91,23 @@
   var notifStock = document.getElementById('notifStock');
   var notifStockEmpty = document.getElementById('notifStockEmpty');
   var btnVolverDashboard = document.getElementById('btnVolverDashboard');
+
+  // --- Elementos: gastos ---
+  var btnNuevoGasto = document.getElementById('btnNuevoGasto');
+  var calcCosto = document.getElementById('calcCosto');
+  var calcMargenTipo = document.getElementById('calcMargenTipo');
+  var calcMargen = document.getElementById('calcMargen');
+  var calcPrecioSugerido = document.getElementById('calcPrecioSugerido');
+  var calcGananciaUnidad = document.getElementById('calcGananciaUnidad');
+  var calcEquivalenciaLabel = document.getElementById('calcEquivalenciaLabel');
+  var calcEquivalencia = document.getElementById('calcEquivalencia');
+  var rentIngresos = document.getElementById('rentIngresos');
+  var rentGastos = document.getElementById('rentGastos');
+  var rentNeta = document.getElementById('rentNeta');
+  var rentGananciaBruta = document.getElementById('rentGananciaBruta');
+  var rentPorcentaje = document.getElementById('rentPorcentaje');
+  var listaGastos = document.getElementById('listaGastos');
+  var gastosEmpty = document.getElementById('gastosEmpty');
 
   // --- Elementos: reportes ---
   var reportesSegmentado = document.getElementById('reportesSegmentado');
@@ -880,6 +899,159 @@
     notifStock.hidden = stockBajo.length === 0;
   }
 
+  // ===================== CALCULADORA DE PRECIO =====================
+  function tipoMargenActual() {
+    var seg = calcMargenTipo.querySelector('.segment.selected');
+    return seg ? seg.dataset.tipo : 'costo';
+  }
+  calcMargenTipo.querySelectorAll('.segment').forEach(function (seg) {
+    seg.addEventListener('click', function () {
+      calcMargenTipo.querySelectorAll('.segment').forEach(function (s) { s.classList.remove('selected'); });
+      seg.classList.add('selected');
+      actualizarCalculadoraPrecio();
+    });
+  });
+  calcCosto.addEventListener('input', actualizarCalculadoraPrecio);
+  calcMargen.addEventListener('input', actualizarCalculadoraPrecio);
+
+  function actualizarCalculadoraPrecio() {
+    var costo = parseFloat(calcCosto.value) || 0;
+    var margen = parseFloat(calcMargen.value) || 0;
+    var tipo = tipoMargenActual();
+    var precio;
+    if (tipo === 'costo') {
+      precio = costo * (1 + margen / 100);
+    } else {
+      var m = Math.min(margen, 99.9);
+      precio = costo / (1 - m / 100);
+    }
+    var ganancia = precio - costo;
+    calcPrecioSugerido.textContent = formatMoney(precio);
+    calcGananciaUnidad.textContent = formatMoney(ganancia);
+    if (tipo === 'costo') {
+      var margenSobrePrecio = precio > 0 ? (ganancia / precio) * 100 : 0;
+      calcEquivalenciaLabel.textContent = 'Equivale a margen sobre precio de venta';
+      calcEquivalencia.textContent = Math.round(margenSobrePrecio) + '%';
+    } else {
+      var recargoSobreCosto = costo > 0 ? (ganancia / costo) * 100 : 0;
+      calcEquivalenciaLabel.textContent = 'Equivale a recargo sobre costo';
+      calcEquivalencia.textContent = Math.round(recargoSobreCosto) + '%';
+    }
+  }
+  actualizarCalculadoraPrecio();
+
+  // ===================== GASTOS =====================
+  function gastosDelMes() {
+    var inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
+    return gastos.filter(function (g) { return new Date(g.fecha) >= inicioMes; });
+  }
+
+  function crearFilaGasto(g) {
+    var row = document.createElement('div');
+    row.className = 'notif-row';
+    row.style.cursor = 'pointer';
+    row.innerHTML =
+      '<div style="flex:1;">' +
+        '<div style="font-size:14px; font-weight:600;">' + escapeHtml(g.concepto) + '</div>' +
+        '<div class="stat-label">' + escapeHtml(g.categoria || 'Otro') + ' · ' + formatFecha(g.fecha) + '</div>' +
+      '</div>' +
+      '<div style="font-size:14.5px; font-weight:700; color:var(--danger);">-' + formatMoney(g.monto) + '</div>';
+    row.addEventListener('click', function () { formularioGasto(g); });
+    return row;
+  }
+
+  function renderGastos() {
+    var lista = gastosDelMes().sort(function (a, b) { return new Date(b.fecha) - new Date(a.fecha); });
+    listaGastos.innerHTML = '';
+    lista.forEach(function (g) { listaGastos.appendChild(crearFilaGasto(g)); });
+    gastosEmpty.hidden = lista.length > 0;
+    listaGastos.hidden = lista.length === 0;
+  }
+
+  function renderRentabilidad() {
+    var inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
+    var ventasMes = ventas.filter(function (v) { return new Date(v.fechaVenta) >= inicioMes; });
+    var ingresos = ventasMes.reduce(function (acc, v) { return acc + v.precioVenta; }, 0);
+    var gananciaBruta = ventasMes.reduce(function (acc, v) { return acc + (v.precioVenta - v.costoUnitario); }, 0);
+    var totalGastos = gastosDelMes().reduce(function (acc, g) { return acc + g.monto; }, 0);
+    var neta = gananciaBruta - totalGastos;
+    rentIngresos.textContent = formatMoney(ingresos);
+    rentGastos.textContent = formatMoney(totalGastos);
+    rentNeta.textContent = formatMoney(neta);
+    rentNeta.style.color = neta >= 0 ? 'var(--ok)' : 'var(--danger)';
+    rentGananciaBruta.textContent = formatMoney(gananciaBruta);
+    var pct = ingresos > 0 ? (neta / ingresos) * 100 : 0;
+    rentPorcentaje.textContent = Math.round(pct) + '% de rentabilidad';
+  }
+
+  function formularioGasto(gastoExistente) {
+    var esEdicion = !!gastoExistente;
+    var opcionesCategoria = GASTO_CATEGORIAS.map(function (cat) {
+      return '<option value="' + cat + '">' + cat + '</option>';
+    }).join('');
+    abrirModal(
+      '<h3>' + (esEdicion ? 'Editar gasto' : 'Nuevo gasto') + '</h3>' +
+      '<div class="field-label">Concepto</div>' +
+      '<input id="mGastoConcepto" type="text" placeholder="Ej: Alquiler del local" />' +
+      '<div class="field-label">Monto</div>' +
+      '<input id="mGastoMonto" type="number" inputmode="decimal" />' +
+      '<div class="field-label">Categoría</div>' +
+      '<select id="mGastoCategoria" class="select-field">' + opcionesCategoria + '</select>' +
+      '<div class="field-label">Fecha</div>' +
+      '<input id="mGastoFecha" type="date" />' +
+      '<div class="modal-buttons">' +
+        '<button id="mGastoCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
+        '<button id="mGastoGuardar" class="btn-block btn-primary-block" type="button">Guardar</button>' +
+      '</div>' +
+      (esEdicion ? '<button id="mGastoEliminar" class="btn-block" type="button" style="margin-top:10px; background:var(--danger-bg); color:var(--danger);">Eliminar gasto</button>' : ''),
+      function (root) {
+        var inputFecha = root.querySelector('#mGastoFecha');
+        if (esEdicion) {
+          root.querySelector('#mGastoConcepto').value = gastoExistente.concepto || '';
+          root.querySelector('#mGastoMonto').value = gastoExistente.monto || 0;
+          root.querySelector('#mGastoCategoria').value = gastoExistente.categoria || 'Otro';
+          inputFecha.value = (gastoExistente.fecha || '').slice(0, 10);
+        } else {
+          root.querySelector('#mGastoCategoria').value = 'Otro';
+          inputFecha.value = new Date().toISOString().slice(0, 10);
+        }
+        root.querySelector('#mGastoCancelar').addEventListener('click', cerrarModal);
+        root.querySelector('#mGastoGuardar').addEventListener('click', function () {
+          var concepto = root.querySelector('#mGastoConcepto').value.trim();
+          var monto = parseFloat(root.querySelector('#mGastoMonto').value);
+          var fechaValor = inputFecha.value;
+          if (!concepto) { root.querySelector('#mGastoConcepto').focus(); return; }
+          if (!(monto > 0)) { root.querySelector('#mGastoMonto').focus(); return; }
+          if (!fechaValor) { inputFecha.focus(); return; }
+          var datos = {
+            concepto: concepto,
+            monto: monto,
+            categoria: root.querySelector('#mGastoCategoria').value,
+            fecha: new Date(fechaValor + 'T12:00:00').toISOString()
+          };
+          var id = esEdicion ? gastoExistente.id : nuevoId();
+          window.FB.setDoc(window.FB.documento(currentUid, 'gastos', id), datos).then(function () {
+            cerrarModal();
+            mostrarToast(esEdicion ? 'Gasto actualizado' : 'Gasto agregado');
+          }).catch(function (err) {
+            mostrarToast('No se pudo guardar: ' + ((err && err.message) || 'revisá tu conexión.'));
+          });
+        });
+        if (esEdicion) {
+          root.querySelector('#mGastoEliminar').addEventListener('click', function () {
+            window.FB.deleteDoc(window.FB.documento(currentUid, 'gastos', gastoExistente.id)).then(function () {
+              cerrarModal();
+              mostrarToast('Gasto eliminado');
+            }).catch(function (err) {
+              mostrarToast('No se pudo eliminar: ' + ((err && err.message) || 'revisá tu conexión.'));
+            });
+          });
+        }
+      }
+    );
+  }
+  btnNuevoGasto.addEventListener('click', function () { formularioGasto(null); });
+
   // ===================== REPORTES =====================
   reportesSegmentado.querySelectorAll('.segment').forEach(function (seg) {
     seg.addEventListener('click', function () {
@@ -962,6 +1134,8 @@
     renderStock();
     renderNotificaciones();
     renderReportes();
+    renderGastos();
+    renderRentabilidad();
     if (vistaActual === 'view-cliente-detalle' && clienteSeleccionadoId) renderClienteDetalle();
   }
 
@@ -1037,6 +1211,7 @@
     unsubs.push(escucharColeccion('clientes', clientes));
     unsubs.push(escucharColeccion('productos', productos));
     unsubs.push(escucharColeccion('ventas', ventas));
+    unsubs.push(escucharColeccion('gastos', gastos));
     setInterval(chequearAvisos, 30000);
   }
 
@@ -1044,7 +1219,7 @@
     appIniciada = false;
     unsubs.forEach(function (u) { u && u(); });
     unsubs = [];
-    clientes.length = 0; productos.length = 0; ventas.length = 0;
+    clientes.length = 0; productos.length = 0; ventas.length = 0; gastos.length = 0;
     currentUid = null;
   }
 
