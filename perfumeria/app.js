@@ -11,6 +11,7 @@
   var ventas = [];
   var gastos = [];
   var GASTO_CATEGORIAS = ['Alquiler', 'Sueldos', 'Servicios', 'Insumos', 'Marketing', 'Impuestos', 'Otro'];
+  var mesGastosOffset = 0; // 0 = mes actual, -1 = mes anterior, etc.
   var unsubs = [];
   var appIniciada = false;
   var vistaActual = 'view-dashboard';
@@ -108,6 +109,11 @@
   var rentPorcentaje = document.getElementById('rentPorcentaje');
   var listaGastos = document.getElementById('listaGastos');
   var gastosEmpty = document.getElementById('gastosEmpty');
+  var btnGastosMesAnterior = document.getElementById('btnGastosMesAnterior');
+  var btnGastosMesSiguiente = document.getElementById('btnGastosMesSiguiente');
+  var gastosMesLabel = document.getElementById('gastosMesLabel');
+  var statRentabilidadNeta = document.getElementById('statRentabilidadNeta');
+  var statRentabilidadRow = document.getElementById('statRentabilidadRow');
 
   // --- Elementos: reportes ---
   var reportesSegmentado = document.getElementById('reportesSegmentado');
@@ -260,6 +266,7 @@
   btnVolverClientes.addEventListener('click', function () { mostrarVista('view-clientes'); });
   btnCerrarNuevaVenta.addEventListener('click', function () { mostrarVista('view-dashboard'); });
   btnNuevaVentaDash.addEventListener('click', function () { abrirNuevaVenta(); });
+  statRentabilidadRow.addEventListener('click', function () { mesGastosOffset = 0; actualizarNavegadorMes(); mostrarVista('view-gastos'); });
 
   // ===================== CLIENTES =====================
   function crearCardCliente(c) {
@@ -801,15 +808,14 @@
 
   function renderDashboard() {
     var hoyStr = new Date().toDateString();
-    var inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
-
-    var ventasMes = ventas.filter(function (v) { return new Date(v.fechaVenta) >= inicioMes; });
-    var gananciaMes = ventasMes.reduce(function (acc, v) { return acc + (v.precioVenta - v.costoUnitario); }, 0);
+    var rentabilidadMes = calcularRentabilidad(0);
     var ventasHoy = ventas.filter(function (v) { return new Date(v.fechaVenta).toDateString() === hoyStr; });
     var totalHoy = ventasHoy.reduce(function (acc, v) { return acc + v.precioVenta; }, 0);
 
-    statGananciaMes.textContent = formatMoney(gananciaMes);
+    statGananciaMes.textContent = formatMoney(rentabilidadMes.gananciaBruta);
     statVentasHoy.textContent = formatMoney(totalHoy);
+    statRentabilidadNeta.textContent = formatMoney(rentabilidadMes.neta);
+    statRentabilidadNeta.style.color = rentabilidadMes.neta >= 0 ? 'var(--ok)' : 'var(--danger)';
 
     var pendientes = cuotasPendientesTodas();
     var saldoTotal = pendientes.reduce(function (acc, x) { return acc + (x.cuota.monto - x.cuota.montoPagado); }, 0);
@@ -941,10 +947,58 @@
   actualizarCalculadoraPrecio();
 
   // ===================== GASTOS =====================
-  function gastosDelMes() {
-    var inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
-    return gastos.filter(function (g) { return new Date(g.fecha) >= inicioMes; });
+  function isoFechaLocal(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   }
+
+  function rangoMes(offset) {
+    var inicio = new Date(); inicio.setDate(1); inicio.setHours(0, 0, 0, 0);
+    inicio.setMonth(inicio.getMonth() + offset);
+    var fin = new Date(inicio);
+    fin.setMonth(fin.getMonth() + 1);
+    return { inicio: inicio, fin: fin };
+  }
+
+  function etiquetaMes(offset) {
+    var texto = rangoMes(offset).inicio.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  }
+
+  function gastosDelRango(offset) {
+    var r = rangoMes(offset);
+    return gastos.filter(function (g) { var f = new Date(g.fecha); return f >= r.inicio && f < r.fin; });
+  }
+
+  // Ganancia bruta de ventas del período menos gastos cargados en el
+  // mismo período. La usan tanto el panel de Gastos (mes navegable) como
+  // el dashboard (siempre mes actual, offset 0).
+  function calcularRentabilidad(offset) {
+    var r = rangoMes(offset);
+    var ventasRango = ventas.filter(function (v) { var f = new Date(v.fechaVenta); return f >= r.inicio && f < r.fin; });
+    var ingresos = ventasRango.reduce(function (acc, v) { return acc + v.precioVenta; }, 0);
+    var gananciaBruta = ventasRango.reduce(function (acc, v) { return acc + (v.precioVenta - v.costoUnitario); }, 0);
+    var totalGastos = gastosDelRango(offset).reduce(function (acc, g) { return acc + g.monto; }, 0);
+    return { ingresos: ingresos, gananciaBruta: gananciaBruta, totalGastos: totalGastos, neta: gananciaBruta - totalGastos };
+  }
+
+  function actualizarNavegadorMes() {
+    gastosMesLabel.textContent = etiquetaMes(mesGastosOffset);
+    btnGastosMesSiguiente.disabled = mesGastosOffset >= 0;
+  }
+  btnGastosMesAnterior.addEventListener('click', function () {
+    mesGastosOffset--;
+    actualizarNavegadorMes();
+    renderGastos();
+    renderRentabilidad();
+  });
+  btnGastosMesSiguiente.addEventListener('click', function () {
+    if (mesGastosOffset >= 0) return;
+    mesGastosOffset++;
+    actualizarNavegadorMes();
+    renderGastos();
+    renderRentabilidad();
+  });
+  actualizarNavegadorMes();
 
   function crearFilaGasto(g) {
     var row = document.createElement('div');
@@ -961,7 +1015,7 @@
   }
 
   function renderGastos() {
-    var lista = gastosDelMes().sort(function (a, b) { return new Date(b.fecha) - new Date(a.fecha); });
+    var lista = gastosDelRango(mesGastosOffset).sort(function (a, b) { return new Date(b.fecha) - new Date(a.fecha); });
     listaGastos.innerHTML = '';
     lista.forEach(function (g) { listaGastos.appendChild(crearFilaGasto(g)); });
     gastosEmpty.hidden = lista.length > 0;
@@ -969,18 +1023,13 @@
   }
 
   function renderRentabilidad() {
-    var inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
-    var ventasMes = ventas.filter(function (v) { return new Date(v.fechaVenta) >= inicioMes; });
-    var ingresos = ventasMes.reduce(function (acc, v) { return acc + v.precioVenta; }, 0);
-    var gananciaBruta = ventasMes.reduce(function (acc, v) { return acc + (v.precioVenta - v.costoUnitario); }, 0);
-    var totalGastos = gastosDelMes().reduce(function (acc, g) { return acc + g.monto; }, 0);
-    var neta = gananciaBruta - totalGastos;
-    rentIngresos.textContent = formatMoney(ingresos);
-    rentGastos.textContent = formatMoney(totalGastos);
-    rentNeta.textContent = formatMoney(neta);
-    rentNeta.style.color = neta >= 0 ? 'var(--ok)' : 'var(--danger)';
-    rentGananciaBruta.textContent = formatMoney(gananciaBruta);
-    var pct = ingresos > 0 ? (neta / ingresos) * 100 : 0;
+    var r = calcularRentabilidad(mesGastosOffset);
+    rentIngresos.textContent = formatMoney(r.ingresos);
+    rentGastos.textContent = formatMoney(r.totalGastos);
+    rentNeta.textContent = formatMoney(r.neta);
+    rentNeta.style.color = r.neta >= 0 ? 'var(--ok)' : 'var(--danger)';
+    rentGananciaBruta.textContent = formatMoney(r.gananciaBruta);
+    var pct = r.ingresos > 0 ? (r.neta / r.ingresos) * 100 : 0;
     rentPorcentaje.textContent = Math.round(pct) + '% de rentabilidad';
   }
 
@@ -1013,7 +1062,7 @@
           inputFecha.value = (gastoExistente.fecha || '').slice(0, 10);
         } else {
           root.querySelector('#mGastoCategoria').value = 'Otro';
-          inputFecha.value = new Date().toISOString().slice(0, 10);
+          inputFecha.value = mesGastosOffset === 0 ? isoFechaLocal(new Date()) : isoFechaLocal(rangoMes(mesGastosOffset).inicio);
         }
         root.querySelector('#mGastoCancelar').addEventListener('click', cerrarModal);
         root.querySelector('#mGastoGuardar').addEventListener('click', function () {
