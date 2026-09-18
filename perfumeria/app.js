@@ -111,6 +111,9 @@
   var gastosEmpty = document.getElementById('gastosEmpty');
   var gastosPorCategoria = document.getElementById('gastosPorCategoria');
   var gastosPorCategoriaEmpty = document.getElementById('gastosPorCategoriaEmpty');
+  var buscarGasto = document.getElementById('buscarGasto');
+  var btnCompartirRentabilidad = document.getElementById('btnCompartirRentabilidad');
+  var gastosRecurrentesPendientesCard = document.getElementById('gastosRecurrentesPendientes');
   var btnGastosMesAnterior = document.getElementById('btnGastosMesAnterior');
   var btnGastosMesSiguiente = document.getElementById('btnGastosMesSiguiente');
   var gastosMesLabel = document.getElementById('gastosMesLabel');
@@ -1006,21 +1009,92 @@
     var row = document.createElement('div');
     row.className = 'notif-row';
     row.style.cursor = 'pointer';
+    var sub = escapeHtml(g.categoria || 'Otro') + ' · ' + formatFecha(g.fecha) + (g.recurrente ? ' · Recurrente' : '');
     row.innerHTML =
       '<div style="flex:1;">' +
         '<div style="font-size:14px; font-weight:600;">' + escapeHtml(g.concepto) + '</div>' +
-        '<div class="stat-label">' + escapeHtml(g.categoria || 'Otro') + ' · ' + formatFecha(g.fecha) + '</div>' +
+        '<div class="stat-label">' + sub + '</div>' +
       '</div>' +
       '<div style="font-size:14.5px; font-weight:700; color:var(--danger);">-' + formatMoney(g.monto) + '</div>';
     row.addEventListener('click', function () { formularioGasto(g); });
     return row;
   }
 
+  // Busca, por concepto, el último gasto marcado como recurrente (de
+  // cualquier mes) que todavía no tenga un equivalente cargado este mes.
+  function gastosRecurrentesPendientes() {
+    if (mesGastosOffset !== 0) return [];
+    var ultimoPorConcepto = {};
+    gastos.forEach(function (g) {
+      if (!g.recurrente) return;
+      var key = (g.concepto || '').trim().toLowerCase();
+      if (!key) return;
+      if (!ultimoPorConcepto[key] || new Date(g.fecha) > new Date(ultimoPorConcepto[key].fecha)) ultimoPorConcepto[key] = g;
+    });
+    var cargadosEsteMes = {};
+    gastosDelRango(0).forEach(function (g) { cargadosEsteMes[(g.concepto || '').trim().toLowerCase()] = true; });
+    var inicioMesActual = rangoMes(0).inicio;
+    return Object.keys(ultimoPorConcepto).map(function (k) { return ultimoPorConcepto[k]; })
+      .filter(function (g) {
+        var key = (g.concepto || '').trim().toLowerCase();
+        return !cargadosEsteMes[key] && new Date(g.fecha) < inicioMesActual;
+      });
+  }
+
+  function cargarGastosRecurrentes(lista) {
+    var fechaHoy = new Date(isoFechaLocal(new Date()) + 'T12:00:00').toISOString();
+    Promise.all(lista.map(function (g) {
+      var id = nuevoId();
+      var datos = { concepto: g.concepto, monto: g.monto, categoria: g.categoria, fecha: fechaHoy, recurrente: true };
+      return window.FB.setDoc(window.FB.documento(currentUid, 'gastos', id), datos);
+    })).then(function () {
+      mostrarToast(lista.length + ' gasto' + (lista.length === 1 ? '' : 's') + ' recurrente' + (lista.length === 1 ? '' : 's') + ' cargado' + (lista.length === 1 ? '' : 's'));
+    }).catch(function (err) {
+      mostrarToast('No se pudo cargar: ' + ((err && err.message) || 'revisá tu conexión.'));
+    });
+  }
+
+  function renderGastosRecurrentesPendientes() {
+    var pendientes = gastosRecurrentesPendientes();
+    gastosRecurrentesPendientesCard.innerHTML = '';
+    gastosRecurrentesPendientesCard.hidden = pendientes.length === 0;
+    if (pendientes.length === 0) return;
+    var header = document.createElement('div');
+    header.className = 'notif-row';
+    header.innerHTML =
+      '<div style="flex:1;">' +
+        '<div style="font-size:14px; font-weight:700;">Gastos recurrentes de este mes</div>' +
+        '<div class="stat-label">Todavía no los cargaste con el monto habitual</div>' +
+      '</div>' +
+      '<button id="btnCargarTodosRecurrentes" class="btn" style="background:var(--blue); color:#fff; white-space:nowrap;">Cargar todos</button>';
+    gastosRecurrentesPendientesCard.appendChild(header);
+    header.querySelector('#btnCargarTodosRecurrentes').addEventListener('click', function () { cargarGastosRecurrentes(pendientes); });
+    pendientes.forEach(function (g) {
+      var row = document.createElement('div');
+      row.className = 'notif-row';
+      row.innerHTML =
+        '<div style="flex:1;">' +
+          '<div style="font-size:13.5px;">' + escapeHtml(g.concepto) + '</div>' +
+          '<div class="stat-label">' + escapeHtml(g.categoria || 'Otro') + ' · ' + formatMoney(g.monto) + '</div>' +
+        '</div>' +
+        '<button class="btn btn-secondary" type="button">Cargar</button>';
+      row.querySelector('button').addEventListener('click', function () { cargarGastosRecurrentes([g]); });
+      gastosRecurrentesPendientesCard.appendChild(row);
+    });
+  }
+
   function renderGastos() {
+    renderGastosRecurrentesPendientes();
     var delRango = gastosDelRango(mesGastosOffset);
-    var lista = delRango.slice().sort(function (a, b) { return new Date(b.fecha) - new Date(a.fecha); });
+    var q = (buscarGasto.value || '').trim().toLowerCase();
+    var lista = delRango.filter(function (g) {
+      return !q || (g.concepto || '').toLowerCase().indexOf(q) !== -1 || (g.categoria || '').toLowerCase().indexOf(q) !== -1;
+    }).sort(function (a, b) { return new Date(b.fecha) - new Date(a.fecha); });
     listaGastos.innerHTML = '';
     lista.forEach(function (g) { listaGastos.appendChild(crearFilaGasto(g)); });
+    gastosEmpty.textContent = (delRango.length > 0 && lista.length === 0)
+      ? 'No encontramos gastos que coincidan con la búsqueda.'
+      : 'Todavía no cargaste gastos en este mes.';
     gastosEmpty.hidden = lista.length > 0;
     listaGastos.hidden = lista.length === 0;
 
@@ -1090,6 +1164,9 @@
       '<select id="mGastoCategoria" class="select-field">' + opcionesCategoria + '</select>' +
       '<div class="field-label">Fecha</div>' +
       '<input id="mGastoFecha" type="date" />' +
+      '<label style="display:flex; align-items:center; gap:8px; margin-top:14px; font-size:14px; color:var(--text); cursor:pointer;">' +
+        '<input id="mGastoRecurrente" type="checkbox" style="width:auto;" /> Es un gasto recurrente (se repite todos los meses)' +
+      '</label>' +
       '<div class="modal-buttons">' +
         '<button id="mGastoCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
         '<button id="mGastoGuardar" class="btn-block btn-primary-block" type="button">Guardar</button>' +
@@ -1102,6 +1179,7 @@
           root.querySelector('#mGastoMonto').value = gastoExistente.monto || 0;
           root.querySelector('#mGastoCategoria').value = gastoExistente.categoria || 'Otro';
           inputFecha.value = (gastoExistente.fecha || '').slice(0, 10);
+          root.querySelector('#mGastoRecurrente').checked = !!gastoExistente.recurrente;
         } else {
           root.querySelector('#mGastoCategoria').value = 'Otro';
           inputFecha.value = mesGastosOffset === 0 ? isoFechaLocal(new Date()) : isoFechaLocal(rangoMes(mesGastosOffset).inicio);
@@ -1118,7 +1196,8 @@
             concepto: concepto,
             monto: monto,
             categoria: root.querySelector('#mGastoCategoria').value,
-            fecha: new Date(fechaValor + 'T12:00:00').toISOString()
+            fecha: new Date(fechaValor + 'T12:00:00').toISOString(),
+            recurrente: root.querySelector('#mGastoRecurrente').checked
           };
           var id = esEdicion ? gastoExistente.id : nuevoId();
           window.FB.setDoc(window.FB.documento(currentUid, 'gastos', id), datos).then(function () {
@@ -1137,6 +1216,21 @@
     );
   }
   btnNuevoGasto.addEventListener('click', function () { formularioGasto(null); });
+  buscarGasto.addEventListener('input', renderGastos);
+
+  btnCompartirRentabilidad.addEventListener('click', function () {
+    var r = calcularRentabilidad(mesGastosOffset);
+    var texto = 'Resumen de ' + etiquetaMes(mesGastosOffset) + ' — Ambaria Fragancias:\n' +
+      '- Ingresos: ' + formatMoney(r.ingresos) + '\n' +
+      '- Gastos: ' + formatMoney(r.totalGastos) + '\n' +
+      '- Ganancia bruta: ' + formatMoney(r.gananciaBruta) + '\n' +
+      '- Rentabilidad neta: ' + formatMoney(r.neta);
+    if (navigator.share) {
+      navigator.share({ text: texto }).catch(function () {});
+    } else {
+      window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+    }
+  });
 
   // ===================== REPORTES =====================
   reportesSegmentado.querySelectorAll('.segment').forEach(function (seg) {
