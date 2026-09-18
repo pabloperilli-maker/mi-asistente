@@ -109,6 +109,8 @@
   var rentPorcentaje = document.getElementById('rentPorcentaje');
   var listaGastos = document.getElementById('listaGastos');
   var gastosEmpty = document.getElementById('gastosEmpty');
+  var gastosPorCategoria = document.getElementById('gastosPorCategoria');
+  var gastosPorCategoriaEmpty = document.getElementById('gastosPorCategoriaEmpty');
   var btnGastosMesAnterior = document.getElementById('btnGastosMesAnterior');
   var btnGastosMesSiguiente = document.getElementById('btnGastosMesSiguiente');
   var gastosMesLabel = document.getElementById('gastosMesLabel');
@@ -1015,11 +1017,29 @@
   }
 
   function renderGastos() {
-    var lista = gastosDelRango(mesGastosOffset).sort(function (a, b) { return new Date(b.fecha) - new Date(a.fecha); });
+    var delRango = gastosDelRango(mesGastosOffset);
+    var lista = delRango.slice().sort(function (a, b) { return new Date(b.fecha) - new Date(a.fecha); });
     listaGastos.innerHTML = '';
     lista.forEach(function (g) { listaGastos.appendChild(crearFilaGasto(g)); });
     gastosEmpty.hidden = lista.length > 0;
     listaGastos.hidden = lista.length === 0;
+
+    var totales = {};
+    delRango.forEach(function (g) {
+      var cat = g.categoria || 'Otro';
+      totales[cat] = (totales[cat] || 0) + g.monto;
+    });
+    var porCategoria = Object.keys(totales).map(function (cat) { return { categoria: cat, monto: totales[cat] }; })
+      .sort(function (a, b) { return b.monto - a.monto; });
+    gastosPorCategoria.innerHTML = '';
+    porCategoria.forEach(function (it) {
+      var row = document.createElement('div');
+      row.className = 'top-row';
+      row.innerHTML = '<span style="font-size:14px;">' + escapeHtml(it.categoria) + '</span><span style="font-size:13.5px; font-weight:700; color:var(--text-muted);">' + formatMoney(it.monto) + '</span>';
+      gastosPorCategoria.appendChild(row);
+    });
+    gastosPorCategoriaEmpty.hidden = porCategoria.length > 0;
+    gastosPorCategoria.hidden = porCategoria.length === 0;
   }
 
   function renderRentabilidad() {
@@ -1031,6 +1051,28 @@
     rentGananciaBruta.textContent = formatMoney(r.gananciaBruta);
     var pct = r.ingresos > 0 ? (r.neta / r.ingresos) * 100 : 0;
     rentPorcentaje.textContent = Math.round(pct) + '% de rentabilidad';
+  }
+
+  function confirmarEliminarGasto(gasto) {
+    abrirModal(
+      '<h3>Eliminar gasto</h3>' +
+      '<p style="color:var(--text-muted); font-size:14.5px; margin:0 0 4px; line-height:1.4;">¿Seguro que querés eliminar "' + escapeHtml(gasto.concepto) + '" por ' + formatMoney(gasto.monto) + '? Esta acción no se puede deshacer.</p>' +
+      '<div class="modal-buttons">' +
+        '<button id="mGastoElimCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
+        '<button id="mGastoElimConfirmar" class="btn-block" type="button" style="background:var(--danger); color:#fff;">Eliminar</button>' +
+      '</div>',
+      function (root) {
+        root.querySelector('#mGastoElimCancelar').addEventListener('click', function () { formularioGasto(gasto); });
+        root.querySelector('#mGastoElimConfirmar').addEventListener('click', function () {
+          window.FB.deleteDoc(window.FB.documento(currentUid, 'gastos', gasto.id)).then(function () {
+            cerrarModal();
+            mostrarToast('Gasto eliminado');
+          }).catch(function (err) {
+            mostrarToast('No se pudo eliminar: ' + ((err && err.message) || 'revisá tu conexión.'));
+          });
+        });
+      }
+    );
   }
 
   function formularioGasto(gastoExistente) {
@@ -1088,12 +1130,7 @@
         });
         if (esEdicion) {
           root.querySelector('#mGastoEliminar').addEventListener('click', function () {
-            window.FB.deleteDoc(window.FB.documento(currentUid, 'gastos', gastoExistente.id)).then(function () {
-              cerrarModal();
-              mostrarToast('Gasto eliminado');
-            }).catch(function (err) {
-              mostrarToast('No se pudo eliminar: ' + ((err && err.message) || 'revisá tu conexión.'));
-            });
+            confirmarEliminarGasto(gastoExistente);
           });
         }
       }
