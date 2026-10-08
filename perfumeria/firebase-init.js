@@ -57,6 +57,15 @@ window.FB = {
     batch.update(documento(uid, 'productos', productoId), { stock: nuevoStock });
     return batch.commit();
   },
+  // Borra una venta cargada por error y repone el stock del producto en
+  // la misma operación atómica (si el producto ya no existe, nuevoStock
+  // viene null y solo se borra la venta).
+  eliminarVenta: function (uid, ventaId, productoId, nuevoStock) {
+    var batch = writeBatch(db);
+    batch.delete(documento(uid, 'ventas', ventaId));
+    if (productoId) batch.update(documento(uid, 'productos', productoId), { stock: nuevoStock });
+    return batch.commit();
+  },
   // Carga varios productos de una sola vez (alta de mercadería nueva).
   importarProductos: function (uid, items) {
     var batch = writeBatch(db);

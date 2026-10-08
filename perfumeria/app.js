@@ -135,7 +135,8 @@
     box: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M3 10h18"/><path d="M7 15h.01"/></svg>',
     clock: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     chevron: '<svg class="icon muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
-    undo: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg>'
+    undo: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg>',
+    trash: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>'
   };
 
   // --- Utilidades ---
@@ -400,6 +401,7 @@
             '<div style="font-size:14.5px; font-weight:600;">' + escapeHtml(v.productoNombre) + '</div>' +
             '<div class="stat-label">Comprado el ' + formatFecha(v.fechaVenta) + ' · Total ' + formatMoney(total) + '</div>' +
           '</div>' +
+          '<button class="btn-eliminar-compra" type="button" aria-label="Eliminar compra" style="border:none; background:transparent; color:var(--text-muted); cursor:pointer; padding:6px; display:flex; flex-shrink:0;">' + ICONS.trash + '</button>' +
         '</div>' +
         '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">' +
           '<div class="progress-track" style="flex:1;"><div class="progress-fill" style="width:' + pct + '%;"></div></div>' +
@@ -408,10 +410,37 @@
         '<div class="cuotas-list"></div>';
       var listCont = card.querySelector('.cuotas-list');
       v.cuotas.forEach(function (cc) { listCont.appendChild(crearFilaCuota(v, cc)); });
+      card.querySelector('.btn-eliminar-compra').addEventListener('click', function () { confirmarEliminarVenta(v); });
       detalleCompras.appendChild(card);
     });
     detalleSinCompras.hidden = compras.length > 0;
     detalleCompras.hidden = compras.length === 0;
+  }
+
+  function confirmarEliminarVenta(venta) {
+    var producto = productos.find(function (p) { return p.id === venta.productoId; });
+    var total = venta.cuotas.reduce(function (acc, c) { return acc + c.monto; }, 0);
+    var mensajeStock = producto ? ' Se le va a devolver 1 unidad de stock a "' + escapeHtml(producto.nombre) + '".' : '';
+    abrirModal(
+      '<h3>Eliminar compra</h3>' +
+      '<p style="color:var(--text-muted); font-size:14.5px; margin:0 0 4px; line-height:1.4;">¿Seguro que querés eliminar la compra de "' + escapeHtml(venta.productoNombre) + '" (' + formatMoney(total) + ') de ' + escapeHtml(venta.clienteNombre) + '? Se pierden los pagos de cuotas ya registrados para esta compra.' + mensajeStock + ' Esta acción no se puede deshacer.</p>' +
+      '<div class="modal-buttons">' +
+        '<button id="mVentaElimCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
+        '<button id="mVentaElimConfirmar" class="btn-block" type="button" style="background:var(--danger); color:#fff;">Eliminar</button>' +
+      '</div>',
+      function (root) {
+        root.querySelector('#mVentaElimCancelar').addEventListener('click', cerrarModal);
+        root.querySelector('#mVentaElimConfirmar').addEventListener('click', function () {
+          var nuevoStock = producto ? producto.stock + 1 : null;
+          window.FB.eliminarVenta(currentUid, venta.id, producto ? producto.id : null, nuevoStock).then(function () {
+            cerrarModal();
+            mostrarToast('Compra eliminada');
+          }).catch(function (err) {
+            mostrarToast('No se pudo eliminar: ' + ((err && err.message) || 'revisá tu conexión.'));
+          });
+        });
+      }
+    );
   }
 
   function formularioPago(venta, cuota) {
