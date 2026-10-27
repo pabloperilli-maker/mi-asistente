@@ -377,19 +377,34 @@
   };
 
   // --- Render ---
+  function colorEstadoTarea(t) {
+    var estado = estadoTarea(t);
+    if (estado === 'vencida') return 'danger';
+    if (estado === 'porvencer') return 'warn';
+    if (t.dueDate && esMismoDia(new Date(t.dueDate), new Date())) return 'blue';
+    return 'ok';
+  }
+
   function crearTaskCard(t) {
     var card = document.createElement('div');
     card.className = 'task-card';
     card.setAttribute('data-task-id', t.id);
     var estado = estadoTarea(t);
-    if (estado === 'vencida') card.classList.add('vencida');
-    if (estado === 'porvencer') card.classList.add('porvencer');
-    if (t.urgente) card.classList.add('urgente');
 
     if (editingId === t.id) {
-      card.appendChild(crearFormEdicion(t));
+      var bodyEdicion = document.createElement('div');
+      bodyEdicion.className = 'task-body';
+      bodyEdicion.appendChild(crearFormEdicion(t));
+      card.appendChild(bodyEdicion);
       return card;
     }
+
+    var stripe = document.createElement('div');
+    stripe.className = 'task-stripe ' + colorEstadoTarea(t);
+    card.appendChild(stripe);
+
+    var body = document.createElement('div');
+    body.className = 'task-body';
 
     var checkBtn = document.createElement('button');
     checkBtn.type = 'button';
@@ -453,9 +468,10 @@
     });
     actions.appendChild(delBtn);
 
-    card.appendChild(checkBtn);
-    card.appendChild(main);
-    card.appendChild(actions);
+    body.appendChild(checkBtn);
+    body.appendChild(main);
+    body.appendChild(actions);
+    card.appendChild(body);
     return card;
   }
 
@@ -520,6 +536,11 @@
   function crearCompletadaCard(t) {
     var card = document.createElement('div');
     card.className = 'task-card';
+    var stripe = document.createElement('div');
+    stripe.className = 'task-stripe ok';
+    card.appendChild(stripe);
+    var body = document.createElement('div');
+    body.className = 'task-body';
     var main = document.createElement('div');
     main.className = 'task-main';
     var textEl = document.createElement('div');
@@ -546,8 +567,9 @@
     actions.appendChild(undoBtn);
     actions.appendChild(delBtn);
 
-    card.appendChild(main);
-    card.appendChild(actions);
+    body.appendChild(main);
+    body.appendChild(actions);
+    card.appendChild(body);
     return card;
   }
 

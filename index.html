@@ -43,6 +43,22 @@
     <p id="micLabel" class="mic-label">Tocá para hablar</p>
   </header>
 
+  <section class="calendar-card">
+    <div class="calendar-header">
+      <button id="calPrevBtn" class="calendar-nav" type="button" aria-label="Mes anterior">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div id="calMonthLabel" class="calendar-title"></div>
+      <button id="calNextBtn" class="calendar-nav" type="button" aria-label="Mes siguiente">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+    <div class="calendar-weekdays">
+      <span>D</span><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span>
+    </div>
+    <div id="calendarGrid" class="calendar-grid"></div>
+  </section>
+
   <section class="input-card">
     <div class="input-row">
       <input id="taskInput" type="text" placeholder="Escribí una tarea o usá el micrófono..." autocomplete="off" />
@@ -63,7 +79,7 @@
 
   <section class="tasks-section" id="vencidasSection" hidden>
     <div class="section-header">
-      <h2><span class="section-icon warn">⚠️</span> Vencidas</h2>
+      <h2><span class="section-icon danger">⚠️</span> Vencidas</h2>
       <span class="section-count" id="vencidasCount">0</span>
     </div>
     <div class="task-list" id="vencidasList"></div>
@@ -71,7 +87,7 @@
 
   <section class="tasks-section">
     <div class="section-header">
-      <h2><span class="section-icon">☀️</span> Hoy</h2>
+      <h2><span class="section-icon blue">☀️</span> Hoy</h2>
       <span class="section-count" id="hoyCount">0</span>
     </div>
     <div class="task-list" id="hoyList"></div>
@@ -80,7 +96,7 @@
 
   <section class="tasks-section">
     <div class="section-header">
-      <h2><span class="section-icon">📋</span> Próximas</h2>
+      <h2><span class="section-icon ok">📋</span> Próximas</h2>
       <span class="section-count" id="proximasCount">0</span>
     </div>
     <div class="task-list" id="proximasList"></div>
@@ -89,27 +105,12 @@
 
   <section class="tasks-section" id="completadasSection" hidden>
     <button class="section-header collapsible" id="completadasToggle" type="button">
-      <h2><span class="section-icon">✅</span> Completadas</h2>
+      <h2><span class="section-icon ok">✅</span> Completadas</h2>
       <span class="section-count" id="completadasCount">0</span>
     </button>
     <div class="task-list" id="completadasList" hidden></div>
   </section>
 
-  <section class="calendar-card">
-    <div class="calendar-header">
-      <button id="calPrevBtn" class="calendar-nav" type="button" aria-label="Mes anterior">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <div id="calMonthLabel" class="calendar-title"></div>
-      <button id="calNextBtn" class="calendar-nav" type="button" aria-label="Mes siguiente">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-    </div>
-    <div class="calendar-weekdays">
-      <span>D</span><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span>
-    </div>
-    <div id="calendarGrid" class="calendar-grid"></div>
-  </section>
 
 </div>
 
