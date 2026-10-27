@@ -9,6 +9,9 @@
   var clientes = [];
   var productos = [];
   var ventas = [];
+  var gastos = [];
+  var GASTO_CATEGORIAS = ['Alquiler', 'Sueldos', 'Servicios', 'Insumos', 'Marketing', 'Impuestos', 'Otro'];
+  var mesGastosOffset = 0; // 0 = mes actual, -1 = mes anterior, etc.
   var unsubs = [];
   var appIniciada = false;
   var vistaActual = 'view-dashboard';
@@ -90,6 +93,33 @@
   var notifStockEmpty = document.getElementById('notifStockEmpty');
   var btnVolverDashboard = document.getElementById('btnVolverDashboard');
 
+  // --- Elementos: gastos ---
+  var btnNuevoGasto = document.getElementById('btnNuevoGasto');
+  var calcCosto = document.getElementById('calcCosto');
+  var calcMargenTipo = document.getElementById('calcMargenTipo');
+  var calcMargen = document.getElementById('calcMargen');
+  var calcPrecioSugerido = document.getElementById('calcPrecioSugerido');
+  var calcGananciaUnidad = document.getElementById('calcGananciaUnidad');
+  var calcEquivalenciaLabel = document.getElementById('calcEquivalenciaLabel');
+  var calcEquivalencia = document.getElementById('calcEquivalencia');
+  var rentIngresos = document.getElementById('rentIngresos');
+  var rentGastos = document.getElementById('rentGastos');
+  var rentNeta = document.getElementById('rentNeta');
+  var rentGananciaBruta = document.getElementById('rentGananciaBruta');
+  var rentPorcentaje = document.getElementById('rentPorcentaje');
+  var listaGastos = document.getElementById('listaGastos');
+  var gastosEmpty = document.getElementById('gastosEmpty');
+  var gastosPorCategoria = document.getElementById('gastosPorCategoria');
+  var gastosPorCategoriaEmpty = document.getElementById('gastosPorCategoriaEmpty');
+  var buscarGasto = document.getElementById('buscarGasto');
+  var btnCompartirRentabilidad = document.getElementById('btnCompartirRentabilidad');
+  var gastosRecurrentesPendientesCard = document.getElementById('gastosRecurrentesPendientes');
+  var btnGastosMesAnterior = document.getElementById('btnGastosMesAnterior');
+  var btnGastosMesSiguiente = document.getElementById('btnGastosMesSiguiente');
+  var gastosMesLabel = document.getElementById('gastosMesLabel');
+  var statRentabilidadNeta = document.getElementById('statRentabilidadNeta');
+  var statRentabilidadRow = document.getElementById('statRentabilidadRow');
+
   // --- Elementos: reportes ---
   var reportesSegmentado = document.getElementById('reportesSegmentado');
   var repVentas = document.getElementById('repVentas');
@@ -105,7 +135,8 @@
     box: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2"/><path d="M3 10h18"/><path d="M7 15h.01"/></svg>',
     clock: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
     chevron: '<svg class="icon muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
-    undo: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg>'
+    undo: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg>',
+    trash: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>'
   };
 
   // --- Utilidades ---
@@ -241,6 +272,7 @@
   btnVolverClientes.addEventListener('click', function () { mostrarVista('view-clientes'); });
   btnCerrarNuevaVenta.addEventListener('click', function () { mostrarVista('view-dashboard'); });
   btnNuevaVentaDash.addEventListener('click', function () { abrirNuevaVenta(); });
+  statRentabilidadRow.addEventListener('click', function () { mesGastosOffset = 0; actualizarNavegadorMes(); mostrarVista('view-gastos'); });
 
   // ===================== CLIENTES =====================
   function crearCardCliente(c) {
@@ -369,6 +401,7 @@
             '<div style="font-size:14.5px; font-weight:600;">' + escapeHtml(v.productoNombre) + '</div>' +
             '<div class="stat-label">Comprado el ' + formatFecha(v.fechaVenta) + ' · Total ' + formatMoney(total) + '</div>' +
           '</div>' +
+          '<button class="btn-eliminar-compra" type="button" aria-label="Eliminar compra" style="border:none; background:transparent; color:var(--text-muted); cursor:pointer; padding:6px; display:flex; flex-shrink:0;">' + ICONS.trash + '</button>' +
         '</div>' +
         '<div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">' +
           '<div class="progress-track" style="flex:1;"><div class="progress-fill" style="width:' + pct + '%;"></div></div>' +
@@ -377,10 +410,37 @@
         '<div class="cuotas-list"></div>';
       var listCont = card.querySelector('.cuotas-list');
       v.cuotas.forEach(function (cc) { listCont.appendChild(crearFilaCuota(v, cc)); });
+      card.querySelector('.btn-eliminar-compra').addEventListener('click', function () { confirmarEliminarVenta(v); });
       detalleCompras.appendChild(card);
     });
     detalleSinCompras.hidden = compras.length > 0;
     detalleCompras.hidden = compras.length === 0;
+  }
+
+  function confirmarEliminarVenta(venta) {
+    var producto = productos.find(function (p) { return p.id === venta.productoId; });
+    var total = venta.cuotas.reduce(function (acc, c) { return acc + c.monto; }, 0);
+    var mensajeStock = producto ? ' Se le va a devolver 1 unidad de stock a "' + escapeHtml(producto.nombre) + '".' : '';
+    abrirModal(
+      '<h3>Eliminar compra</h3>' +
+      '<p style="color:var(--text-muted); font-size:14.5px; margin:0 0 4px; line-height:1.4;">¿Seguro que querés eliminar la compra de "' + escapeHtml(venta.productoNombre) + '" (' + formatMoney(total) + ') de ' + escapeHtml(venta.clienteNombre) + '? Se pierden los pagos de cuotas ya registrados para esta compra.' + mensajeStock + ' Esta acción no se puede deshacer.</p>' +
+      '<div class="modal-buttons">' +
+        '<button id="mVentaElimCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
+        '<button id="mVentaElimConfirmar" class="btn-block" type="button" style="background:var(--danger); color:#fff;">Eliminar</button>' +
+      '</div>',
+      function (root) {
+        root.querySelector('#mVentaElimCancelar').addEventListener('click', cerrarModal);
+        root.querySelector('#mVentaElimConfirmar').addEventListener('click', function () {
+          var nuevoStock = producto ? producto.stock + 1 : null;
+          window.FB.eliminarVenta(currentUid, venta.id, producto ? producto.id : null, nuevoStock).then(function () {
+            cerrarModal();
+            mostrarToast('Compra eliminada');
+          }).catch(function (err) {
+            mostrarToast('No se pudo eliminar: ' + ((err && err.message) || 'revisá tu conexión.'));
+          });
+        });
+      }
+    );
   }
 
   function formularioPago(venta, cuota) {
@@ -782,15 +842,14 @@
 
   function renderDashboard() {
     var hoyStr = new Date().toDateString();
-    var inicioMes = new Date(); inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
-
-    var ventasMes = ventas.filter(function (v) { return new Date(v.fechaVenta) >= inicioMes; });
-    var gananciaMes = ventasMes.reduce(function (acc, v) { return acc + (v.precioVenta - v.costoUnitario); }, 0);
+    var rentabilidadMes = calcularRentabilidad(0);
     var ventasHoy = ventas.filter(function (v) { return new Date(v.fechaVenta).toDateString() === hoyStr; });
     var totalHoy = ventasHoy.reduce(function (acc, v) { return acc + v.precioVenta; }, 0);
 
-    statGananciaMes.textContent = formatMoney(gananciaMes);
+    statGananciaMes.textContent = formatMoney(rentabilidadMes.gananciaBruta);
     statVentasHoy.textContent = formatMoney(totalHoy);
+    statRentabilidadNeta.textContent = formatMoney(rentabilidadMes.neta);
+    statRentabilidadNeta.style.color = rentabilidadMes.neta >= 0 ? 'var(--ok)' : 'var(--danger)';
 
     var pendientes = cuotasPendientesTodas();
     var saldoTotal = pendientes.reduce(function (acc, x) { return acc + (x.cuota.monto - x.cuota.montoPagado); }, 0);
@@ -880,6 +939,328 @@
     notifStock.hidden = stockBajo.length === 0;
   }
 
+  // ===================== CALCULADORA DE PRECIO =====================
+  function tipoMargenActual() {
+    var seg = calcMargenTipo.querySelector('.segment.selected');
+    return seg ? seg.dataset.tipo : 'costo';
+  }
+  calcMargenTipo.querySelectorAll('.segment').forEach(function (seg) {
+    seg.addEventListener('click', function () {
+      calcMargenTipo.querySelectorAll('.segment').forEach(function (s) { s.classList.remove('selected'); });
+      seg.classList.add('selected');
+      actualizarCalculadoraPrecio();
+    });
+  });
+  calcCosto.addEventListener('input', actualizarCalculadoraPrecio);
+  calcMargen.addEventListener('input', actualizarCalculadoraPrecio);
+
+  function actualizarCalculadoraPrecio() {
+    var costo = parseFloat(calcCosto.value) || 0;
+    var margen = parseFloat(calcMargen.value) || 0;
+    var tipo = tipoMargenActual();
+    var precio;
+    if (tipo === 'costo') {
+      precio = costo * (1 + margen / 100);
+    } else {
+      var m = Math.min(margen, 99.9);
+      precio = costo / (1 - m / 100);
+    }
+    var ganancia = precio - costo;
+    calcPrecioSugerido.textContent = formatMoney(precio);
+    calcGananciaUnidad.textContent = formatMoney(ganancia);
+    if (tipo === 'costo') {
+      var margenSobrePrecio = precio > 0 ? (ganancia / precio) * 100 : 0;
+      calcEquivalenciaLabel.textContent = 'Equivale a margen sobre precio de venta';
+      calcEquivalencia.textContent = Math.round(margenSobrePrecio) + '%';
+    } else {
+      var recargoSobreCosto = costo > 0 ? (ganancia / costo) * 100 : 0;
+      calcEquivalenciaLabel.textContent = 'Equivale a recargo sobre costo';
+      calcEquivalencia.textContent = Math.round(recargoSobreCosto) + '%';
+    }
+  }
+  actualizarCalculadoraPrecio();
+
+  // ===================== GASTOS =====================
+  function isoFechaLocal(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  function rangoMes(offset) {
+    var inicio = new Date(); inicio.setDate(1); inicio.setHours(0, 0, 0, 0);
+    inicio.setMonth(inicio.getMonth() + offset);
+    var fin = new Date(inicio);
+    fin.setMonth(fin.getMonth() + 1);
+    return { inicio: inicio, fin: fin };
+  }
+
+  function etiquetaMes(offset) {
+    var texto = rangoMes(offset).inicio.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  }
+
+  function gastosDelRango(offset) {
+    var r = rangoMes(offset);
+    return gastos.filter(function (g) { var f = new Date(g.fecha); return f >= r.inicio && f < r.fin; });
+  }
+
+  // Ganancia bruta de ventas del período menos gastos cargados en el
+  // mismo período. La usan tanto el panel de Gastos (mes navegable) como
+  // el dashboard (siempre mes actual, offset 0).
+  function calcularRentabilidad(offset) {
+    var r = rangoMes(offset);
+    var ventasRango = ventas.filter(function (v) { var f = new Date(v.fechaVenta); return f >= r.inicio && f < r.fin; });
+    var ingresos = ventasRango.reduce(function (acc, v) { return acc + v.precioVenta; }, 0);
+    var gananciaBruta = ventasRango.reduce(function (acc, v) { return acc + (v.precioVenta - v.costoUnitario); }, 0);
+    var totalGastos = gastosDelRango(offset).reduce(function (acc, g) { return acc + g.monto; }, 0);
+    return { ingresos: ingresos, gananciaBruta: gananciaBruta, totalGastos: totalGastos, neta: gananciaBruta - totalGastos };
+  }
+
+  function actualizarNavegadorMes() {
+    gastosMesLabel.textContent = etiquetaMes(mesGastosOffset);
+    btnGastosMesSiguiente.disabled = mesGastosOffset >= 0;
+  }
+  btnGastosMesAnterior.addEventListener('click', function () {
+    mesGastosOffset--;
+    actualizarNavegadorMes();
+    renderGastos();
+    renderRentabilidad();
+  });
+  btnGastosMesSiguiente.addEventListener('click', function () {
+    if (mesGastosOffset >= 0) return;
+    mesGastosOffset++;
+    actualizarNavegadorMes();
+    renderGastos();
+    renderRentabilidad();
+  });
+  actualizarNavegadorMes();
+
+  function crearFilaGasto(g) {
+    var row = document.createElement('div');
+    row.className = 'notif-row';
+    row.style.cursor = 'pointer';
+    var sub = escapeHtml(g.categoria || 'Otro') + ' · ' + formatFecha(g.fecha) + (g.recurrente ? ' · Recurrente' : '');
+    row.innerHTML =
+      '<div style="flex:1;">' +
+        '<div style="font-size:14px; font-weight:600;">' + escapeHtml(g.concepto) + '</div>' +
+        '<div class="stat-label">' + sub + '</div>' +
+      '</div>' +
+      '<div style="font-size:14.5px; font-weight:700; color:var(--danger);">-' + formatMoney(g.monto) + '</div>';
+    row.addEventListener('click', function () { formularioGasto(g); });
+    return row;
+  }
+
+  // Busca, por concepto, el último gasto marcado como recurrente (de
+  // cualquier mes) que todavía no tenga un equivalente cargado este mes.
+  function gastosRecurrentesPendientes() {
+    if (mesGastosOffset !== 0) return [];
+    var ultimoPorConcepto = {};
+    gastos.forEach(function (g) {
+      if (!g.recurrente) return;
+      var key = (g.concepto || '').trim().toLowerCase();
+      if (!key) return;
+      if (!ultimoPorConcepto[key] || new Date(g.fecha) > new Date(ultimoPorConcepto[key].fecha)) ultimoPorConcepto[key] = g;
+    });
+    var cargadosEsteMes = {};
+    gastosDelRango(0).forEach(function (g) { cargadosEsteMes[(g.concepto || '').trim().toLowerCase()] = true; });
+    var inicioMesActual = rangoMes(0).inicio;
+    return Object.keys(ultimoPorConcepto).map(function (k) { return ultimoPorConcepto[k]; })
+      .filter(function (g) {
+        var key = (g.concepto || '').trim().toLowerCase();
+        return !cargadosEsteMes[key] && new Date(g.fecha) < inicioMesActual;
+      });
+  }
+
+  function cargarGastosRecurrentes(lista) {
+    var fechaHoy = new Date(isoFechaLocal(new Date()) + 'T12:00:00').toISOString();
+    Promise.all(lista.map(function (g) {
+      var id = nuevoId();
+      var datos = { concepto: g.concepto, monto: g.monto, categoria: g.categoria, fecha: fechaHoy, recurrente: true };
+      return window.FB.setDoc(window.FB.documento(currentUid, 'gastos', id), datos);
+    })).then(function () {
+      mostrarToast(lista.length + ' gasto' + (lista.length === 1 ? '' : 's') + ' recurrente' + (lista.length === 1 ? '' : 's') + ' cargado' + (lista.length === 1 ? '' : 's'));
+    }).catch(function (err) {
+      mostrarToast('No se pudo cargar: ' + ((err && err.message) || 'revisá tu conexión.'));
+    });
+  }
+
+  function renderGastosRecurrentesPendientes() {
+    var pendientes = gastosRecurrentesPendientes();
+    gastosRecurrentesPendientesCard.innerHTML = '';
+    gastosRecurrentesPendientesCard.hidden = pendientes.length === 0;
+    if (pendientes.length === 0) return;
+    var header = document.createElement('div');
+    header.className = 'notif-row';
+    header.innerHTML =
+      '<div style="flex:1;">' +
+        '<div style="font-size:14px; font-weight:700;">Gastos recurrentes de este mes</div>' +
+        '<div class="stat-label">Todavía no los cargaste con el monto habitual</div>' +
+      '</div>' +
+      '<button id="btnCargarTodosRecurrentes" class="btn" style="background:var(--blue); color:#fff; white-space:nowrap;">Cargar todos</button>';
+    gastosRecurrentesPendientesCard.appendChild(header);
+    header.querySelector('#btnCargarTodosRecurrentes').addEventListener('click', function () { cargarGastosRecurrentes(pendientes); });
+    pendientes.forEach(function (g) {
+      var row = document.createElement('div');
+      row.className = 'notif-row';
+      row.innerHTML =
+        '<div style="flex:1;">' +
+          '<div style="font-size:13.5px;">' + escapeHtml(g.concepto) + '</div>' +
+          '<div class="stat-label">' + escapeHtml(g.categoria || 'Otro') + ' · ' + formatMoney(g.monto) + '</div>' +
+        '</div>' +
+        '<button class="btn btn-secondary" type="button">Cargar</button>';
+      row.querySelector('button').addEventListener('click', function () { cargarGastosRecurrentes([g]); });
+      gastosRecurrentesPendientesCard.appendChild(row);
+    });
+  }
+
+  function renderGastos() {
+    renderGastosRecurrentesPendientes();
+    var delRango = gastosDelRango(mesGastosOffset);
+    var q = (buscarGasto.value || '').trim().toLowerCase();
+    var lista = delRango.filter(function (g) {
+      return !q || (g.concepto || '').toLowerCase().indexOf(q) !== -1 || (g.categoria || '').toLowerCase().indexOf(q) !== -1;
+    }).sort(function (a, b) { return new Date(b.fecha) - new Date(a.fecha); });
+    listaGastos.innerHTML = '';
+    lista.forEach(function (g) { listaGastos.appendChild(crearFilaGasto(g)); });
+    gastosEmpty.textContent = (delRango.length > 0 && lista.length === 0)
+      ? 'No encontramos gastos que coincidan con la búsqueda.'
+      : 'Todavía no cargaste gastos en este mes.';
+    gastosEmpty.hidden = lista.length > 0;
+    listaGastos.hidden = lista.length === 0;
+
+    var totales = {};
+    delRango.forEach(function (g) {
+      var cat = g.categoria || 'Otro';
+      totales[cat] = (totales[cat] || 0) + g.monto;
+    });
+    var porCategoria = Object.keys(totales).map(function (cat) { return { categoria: cat, monto: totales[cat] }; })
+      .sort(function (a, b) { return b.monto - a.monto; });
+    gastosPorCategoria.innerHTML = '';
+    porCategoria.forEach(function (it) {
+      var row = document.createElement('div');
+      row.className = 'top-row';
+      row.innerHTML = '<span style="font-size:14px;">' + escapeHtml(it.categoria) + '</span><span style="font-size:13.5px; font-weight:700; color:var(--text-muted);">' + formatMoney(it.monto) + '</span>';
+      gastosPorCategoria.appendChild(row);
+    });
+    gastosPorCategoriaEmpty.hidden = porCategoria.length > 0;
+    gastosPorCategoria.hidden = porCategoria.length === 0;
+  }
+
+  function renderRentabilidad() {
+    var r = calcularRentabilidad(mesGastosOffset);
+    rentIngresos.textContent = formatMoney(r.ingresos);
+    rentGastos.textContent = formatMoney(r.totalGastos);
+    rentNeta.textContent = formatMoney(r.neta);
+    rentNeta.style.color = r.neta >= 0 ? 'var(--ok)' : 'var(--danger)';
+    rentGananciaBruta.textContent = formatMoney(r.gananciaBruta);
+    var pct = r.ingresos > 0 ? (r.neta / r.ingresos) * 100 : 0;
+    rentPorcentaje.textContent = Math.round(pct) + '% de rentabilidad';
+  }
+
+  function confirmarEliminarGasto(gasto) {
+    abrirModal(
+      '<h3>Eliminar gasto</h3>' +
+      '<p style="color:var(--text-muted); font-size:14.5px; margin:0 0 4px; line-height:1.4;">¿Seguro que querés eliminar "' + escapeHtml(gasto.concepto) + '" por ' + formatMoney(gasto.monto) + '? Esta acción no se puede deshacer.</p>' +
+      '<div class="modal-buttons">' +
+        '<button id="mGastoElimCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
+        '<button id="mGastoElimConfirmar" class="btn-block" type="button" style="background:var(--danger); color:#fff;">Eliminar</button>' +
+      '</div>',
+      function (root) {
+        root.querySelector('#mGastoElimCancelar').addEventListener('click', function () { formularioGasto(gasto); });
+        root.querySelector('#mGastoElimConfirmar').addEventListener('click', function () {
+          window.FB.deleteDoc(window.FB.documento(currentUid, 'gastos', gasto.id)).then(function () {
+            cerrarModal();
+            mostrarToast('Gasto eliminado');
+          }).catch(function (err) {
+            mostrarToast('No se pudo eliminar: ' + ((err && err.message) || 'revisá tu conexión.'));
+          });
+        });
+      }
+    );
+  }
+
+  function formularioGasto(gastoExistente) {
+    var esEdicion = !!gastoExistente;
+    var opcionesCategoria = GASTO_CATEGORIAS.map(function (cat) {
+      return '<option value="' + cat + '">' + cat + '</option>';
+    }).join('');
+    abrirModal(
+      '<h3>' + (esEdicion ? 'Editar gasto' : 'Nuevo gasto') + '</h3>' +
+      '<div class="field-label">Concepto</div>' +
+      '<input id="mGastoConcepto" type="text" placeholder="Ej: Alquiler del local" />' +
+      '<div class="field-label">Monto</div>' +
+      '<input id="mGastoMonto" type="number" inputmode="decimal" />' +
+      '<div class="field-label">Categoría</div>' +
+      '<select id="mGastoCategoria" class="select-field">' + opcionesCategoria + '</select>' +
+      '<div class="field-label">Fecha</div>' +
+      '<input id="mGastoFecha" type="date" />' +
+      '<label style="display:flex; align-items:center; gap:8px; margin-top:14px; font-size:14px; color:var(--text); cursor:pointer;">' +
+        '<input id="mGastoRecurrente" type="checkbox" style="width:auto;" /> Es un gasto recurrente (se repite todos los meses)' +
+      '</label>' +
+      '<div class="modal-buttons">' +
+        '<button id="mGastoCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
+        '<button id="mGastoGuardar" class="btn-block btn-primary-block" type="button">Guardar</button>' +
+      '</div>' +
+      (esEdicion ? '<button id="mGastoEliminar" class="btn-block" type="button" style="margin-top:10px; background:var(--danger-bg); color:var(--danger);">Eliminar gasto</button>' : ''),
+      function (root) {
+        var inputFecha = root.querySelector('#mGastoFecha');
+        if (esEdicion) {
+          root.querySelector('#mGastoConcepto').value = gastoExistente.concepto || '';
+          root.querySelector('#mGastoMonto').value = gastoExistente.monto || 0;
+          root.querySelector('#mGastoCategoria').value = gastoExistente.categoria || 'Otro';
+          inputFecha.value = (gastoExistente.fecha || '').slice(0, 10);
+          root.querySelector('#mGastoRecurrente').checked = !!gastoExistente.recurrente;
+        } else {
+          root.querySelector('#mGastoCategoria').value = 'Otro';
+          inputFecha.value = mesGastosOffset === 0 ? isoFechaLocal(new Date()) : isoFechaLocal(rangoMes(mesGastosOffset).inicio);
+        }
+        root.querySelector('#mGastoCancelar').addEventListener('click', cerrarModal);
+        root.querySelector('#mGastoGuardar').addEventListener('click', function () {
+          var concepto = root.querySelector('#mGastoConcepto').value.trim();
+          var monto = parseFloat(root.querySelector('#mGastoMonto').value);
+          var fechaValor = inputFecha.value;
+          if (!concepto) { root.querySelector('#mGastoConcepto').focus(); return; }
+          if (!(monto > 0)) { root.querySelector('#mGastoMonto').focus(); return; }
+          if (!fechaValor) { inputFecha.focus(); return; }
+          var datos = {
+            concepto: concepto,
+            monto: monto,
+            categoria: root.querySelector('#mGastoCategoria').value,
+            fecha: new Date(fechaValor + 'T12:00:00').toISOString(),
+            recurrente: root.querySelector('#mGastoRecurrente').checked
+          };
+          var id = esEdicion ? gastoExistente.id : nuevoId();
+          window.FB.setDoc(window.FB.documento(currentUid, 'gastos', id), datos).then(function () {
+            cerrarModal();
+            mostrarToast(esEdicion ? 'Gasto actualizado' : 'Gasto agregado');
+          }).catch(function (err) {
+            mostrarToast('No se pudo guardar: ' + ((err && err.message) || 'revisá tu conexión.'));
+          });
+        });
+        if (esEdicion) {
+          root.querySelector('#mGastoEliminar').addEventListener('click', function () {
+            confirmarEliminarGasto(gastoExistente);
+          });
+        }
+      }
+    );
+  }
+  btnNuevoGasto.addEventListener('click', function () { formularioGasto(null); });
+  buscarGasto.addEventListener('input', renderGastos);
+
+  btnCompartirRentabilidad.addEventListener('click', function () {
+    var r = calcularRentabilidad(mesGastosOffset);
+    var texto = 'Resumen de ' + etiquetaMes(mesGastosOffset) + ' — Ambaria Fragancias:\n' +
+      '- Ingresos: ' + formatMoney(r.ingresos) + '\n' +
+      '- Gastos: ' + formatMoney(r.totalGastos) + '\n' +
+      '- Ganancia bruta: ' + formatMoney(r.gananciaBruta) + '\n' +
+      '- Rentabilidad neta: ' + formatMoney(r.neta);
+    if (navigator.share) {
+      navigator.share({ text: texto }).catch(function () {});
+    } else {
+      window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+    }
+  });
+
   // ===================== REPORTES =====================
   reportesSegmentado.querySelectorAll('.segment').forEach(function (seg) {
     seg.addEventListener('click', function () {
@@ -962,6 +1343,8 @@
     renderStock();
     renderNotificaciones();
     renderReportes();
+    renderGastos();
+    renderRentabilidad();
     if (vistaActual === 'view-cliente-detalle' && clienteSeleccionadoId) renderClienteDetalle();
   }
 
@@ -1037,6 +1420,7 @@
     unsubs.push(escucharColeccion('clientes', clientes));
     unsubs.push(escucharColeccion('productos', productos));
     unsubs.push(escucharColeccion('ventas', ventas));
+    unsubs.push(escucharColeccion('gastos', gastos));
     setInterval(chequearAvisos, 30000);
   }
 
@@ -1044,7 +1428,7 @@
     appIniciada = false;
     unsubs.forEach(function (u) { u && u(); });
     unsubs = [];
-    clientes.length = 0; productos.length = 0; ventas.length = 0;
+    clientes.length = 0; productos.length = 0; ventas.length = 0; gastos.length = 0;
     currentUid = null;
   }
 
