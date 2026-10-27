@@ -706,7 +706,8 @@
       '<div class="modal-buttons">' +
         '<button id="mProdCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
         '<button id="mProdGuardar" class="btn-block btn-primary-block" type="button">Guardar</button>' +
-      '</div>',
+      '</div>' +
+      (esEdicion ? '<button id="mProdEliminar" type="button" style="width:100%; margin-top:10px; padding:10px; border:none; background:transparent; color:var(--danger); font-weight:600; font-size:14px; cursor:pointer;">Eliminar producto</button>' : ''),
       function (root) {
         if (esEdicion) {
           root.querySelector('#mProdNombre').value = productoExistente.nombre || '';
@@ -738,6 +739,33 @@
             mostrarToast('No se pudo guardar: ' + ((err && err.message) || 'revisá tu conexión.'));
           });
         });
+        if (esEdicion) {
+          root.querySelector('#mProdEliminar').addEventListener('click', function () {
+            confirmarEliminarProducto(productoExistente);
+          });
+        }
+      }
+    );
+  }
+
+  function confirmarEliminarProducto(producto) {
+    abrirModal(
+      '<h3>Eliminar producto</h3>' +
+      '<p style="color:var(--text-muted); font-size:14.5px; margin:0 0 4px; line-height:1.4;">¿Seguro que querés eliminar "' + escapeHtml(producto.nombre) + '" del stock? Las ventas ya registradas de este producto no se borran. Esta acción no se puede deshacer.</p>' +
+      '<div class="modal-buttons">' +
+        '<button id="mProdElimCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
+        '<button id="mProdElimConfirmar" class="btn-block" type="button" style="background:var(--danger); color:#fff;">Eliminar</button>' +
+      '</div>',
+      function (root) {
+        root.querySelector('#mProdElimCancelar').addEventListener('click', cerrarModal);
+        root.querySelector('#mProdElimConfirmar').addEventListener('click', function () {
+          window.FB.deleteDoc(window.FB.documento(currentUid, 'productos', producto.id)).then(function () {
+            cerrarModal();
+            mostrarToast('Producto eliminado');
+          }).catch(function (err) {
+            mostrarToast('No se pudo eliminar: ' + ((err && err.message) || 'revisá tu conexión.'));
+          });
+        });
       }
     );
   }
@@ -745,24 +773,8 @@
 
   // Carga masiva de productos: una línea por producto, campos separados
   // por tabulador o "|" (nombre, código, cantidad, costo, precio de venta).
-  var IMPORTAR_EJEMPLO = [
-    'ARMAF CLUB DE NUIT IMPERIALE EDP FEM 105ML(169)|743080|2|59815|84000',
-    'AL HARAMAIN BELLE FEM 75ML(438)|750180|2|40070|57000',
-    'LATTAFA NICHE E.ZIKRA EDP 100ML(985)UNISEX|765286|2|61830|87000',
-    'LATTAFA NICHE E.ANTIQUE EDP 100ML(293)UNISEX|765297|2|57000|80000',
-    'ARMAF LE PARFAIT AZURE FEM EDP 100ML(496)|763320|1|50545|71000',
-    'LOEWE SOLO ELIXIR ELLA EDP FEM 100ML(051)|771430|1|335882|371000',
-    'TOM FORD CAFE ROSE EDP FEM 100ML(599)|764263|1|289132|351000',
-    'YSL LIBRE FLORALE EDP FEM 90ML(701)|771105|1|205300|288000',
-    'DIOR SAUVAGE EDP MAS 100ML(247)|690856|1|176290|217000',
-    'TESTER CHANEL ALLURE EDP FEM 100ML|502646|1|169840|238000',
-    'TESTER CK BE 100ML(588) UNISEX|750337|1|34400|79000',
-    'MOSCHINO UOMO 125ML(106)|673396|1|49740|80000',
-    'ISSEY MIYAKE INTENSE MAS 125ML(018)|172649|1|63440|89000',
-    'ELIE SAAB EDP FEM 90ML(893)|569042|1|100520|141000',
-    'AZZARO THE MOST WANTED INTENSE EDP MAS 100ML(307)|729185|1|127920|180000'
-  ].join('\n');
-
+  // También se puede subir un archivo (Excel o CSV) que se vuelca a este
+  // mismo formato para revisar antes de confirmar.
   function parsearLineaProducto(linea) {
     var partes = linea.split(/\t|\|/).map(function (s) { return s.trim(); });
     if (partes.length < 5 || !partes[0]) return null;
@@ -780,11 +792,88 @@
     };
   }
 
+  // Busca en la primera fila del archivo palabras clave para reconocer
+  // qué columna es cada dato, sin importar el orden en que vengan.
+  function detectarColumnasArchivo(filaEncabezado) {
+    var map = {};
+    filaEncabezado.forEach(function (celda, i) {
+      var n = (celda || '').toString().toLowerCase()
+        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i').replace(/ó/g, 'o').replace(/ú/g, 'u').trim();
+      if (!n) return;
+      if (map.nombre === undefined && /fragan|nombre|producto|descrip/.test(n)) map.nombre = i;
+      else if (map.codigo === undefined && /codigo/.test(n)) map.codigo = i;
+      else if (map.cantidad === undefined && /cantidad|stock/.test(n)) map.cantidad = i;
+      else if (map.costo === undefined && /costo/.test(n)) map.costo = i;
+      else if (map.precioVenta === undefined && /venta/.test(n)) map.precioVenta = i;
+    });
+    return map;
+  }
+
+  function filasDeArchivoATexto(filas) {
+    filas = filas.filter(function (f) { return f.some(function (c) { return (c + '').trim(); }); });
+    if (!filas.length) return '';
+    var map = detectarColumnasArchivo(filas[0]);
+    var tieneEncabezado = map.nombre != null && map.cantidad != null && map.costo != null && map.precioVenta != null;
+    var datos = tieneEncabezado ? filas.slice(1) : filas;
+    if (!tieneEncabezado) map = { nombre: 0, codigo: 1, cantidad: 2, costo: 3, precioVenta: 4 };
+    return datos.map(function (fila) {
+      var val = function (i) { return i != null && fila[i] != null ? fila[i].toString().trim() : ''; };
+      return [val(map.nombre), val(map.codigo), val(map.cantidad), val(map.costo), val(map.precioVenta)].join('|');
+    }).filter(function (l) { return l.split('|')[0]; }).join('\n');
+  }
+
+  function manejarArchivoImportado(file, textarea, error) {
+    error.hidden = true;
+    var ext = (file.name.split('.').pop() || '').toLowerCase();
+    var reader = new FileReader();
+    reader.onerror = function () {
+      error.textContent = 'No se pudo leer el archivo.';
+      error.hidden = false;
+    };
+    function volcar(filas) {
+      var texto = filasDeArchivoATexto(filas);
+      if (!texto) {
+        error.textContent = 'No se pudo interpretar ninguna fila del archivo.';
+        error.hidden = false;
+        return;
+      }
+      textarea.value = texto;
+      mostrarToast('Archivo cargado: revisá la lista antes de importar.');
+    }
+    if (ext === 'xlsx' || ext === 'xls') {
+      if (typeof XLSX === 'undefined') {
+        error.textContent = 'No se pudo cargar el lector de Excel. Revisá tu conexión e intentá de nuevo.';
+        error.hidden = false;
+        return;
+      }
+      reader.onload = function (e) {
+        try {
+          var wb = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
+          var ws = wb.Sheets[wb.SheetNames[0]];
+          volcar(XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' }));
+        } catch (err) {
+          error.textContent = 'No se pudo leer el archivo: revisá que sea un Excel válido.';
+          error.hidden = false;
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.onload = function (e) {
+        var lineas = e.target.result.split(/\r?\n/).filter(function (l) { return l.trim(); });
+        if (!lineas.length) { error.textContent = 'El archivo está vacío.'; error.hidden = false; return; }
+        var delim = lineas[0].indexOf('\t') !== -1 ? '\t' : (lineas[0].indexOf(';') !== -1 ? ';' : (lineas[0].indexOf('|') !== -1 ? '|' : ','));
+        volcar(lineas.map(function (l) { return l.split(delim); }));
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+  }
+
   function formularioImportarProductos() {
     abrirModal(
       '<h3>Importar productos</h3>' +
-      '<div class="stat-label" style="margin-bottom:12px;">Una línea por producto: nombre, código, cantidad, costo y precio de venta (separados por tabulador o "|").</div>' +
-      '<textarea id="mImpTexto" rows="10" style="width:100%; font-family:monospace; font-size:12.5px; padding:10px; border-radius:10px; border:1px solid var(--border); resize:vertical;"></textarea>' +
+      '<div class="stat-label" style="margin-bottom:12px;">Subí un archivo Excel o CSV con los productos nuevos, o pegalos a mano abajo: nombre, código, cantidad, costo y precio de venta.</div>' +
+      '<input id="mImpArchivo" type="file" accept=".xlsx,.xls,.csv,.txt" style="margin-bottom:12px; width:100%;" />' +
+      '<textarea id="mImpTexto" rows="10" placeholder="Dior Sauvage 100ml|690856|2|176290|217000" style="width:100%; font-family:monospace; font-size:12.5px; padding:10px; border-radius:10px; border:1px solid var(--border); resize:vertical;"></textarea>' +
       '<p id="mImpError" class="auth-error" hidden></p>' +
       '<div class="modal-buttons">' +
         '<button id="mImpCancelar" class="btn-block" type="button" style="background:#f2f4f9;color:var(--text-muted);">Cancelar</button>' +
@@ -793,7 +882,10 @@
       function (root) {
         var textarea = root.querySelector('#mImpTexto');
         var error = root.querySelector('#mImpError');
-        textarea.value = IMPORTAR_EJEMPLO;
+        var inputArchivo = root.querySelector('#mImpArchivo');
+        inputArchivo.addEventListener('change', function () {
+          if (inputArchivo.files[0]) manejarArchivoImportado(inputArchivo.files[0], textarea, error);
+        });
         root.querySelector('#mImpCancelar').addEventListener('click', cerrarModal);
         root.querySelector('#mImpGuardar').addEventListener('click', function () {
           var lineas = textarea.value.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);

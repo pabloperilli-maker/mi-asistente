@@ -1,4 +1,4 @@
-const CACHE = 'perfumeria-v5';
+const CACHE = 'perfumeria-v6';
 const ASSETS = [
   './',
   './index.html',
