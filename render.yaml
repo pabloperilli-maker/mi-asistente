@@ -1,0 +1,30 @@
+# Configuración para publicar Orientación Legal Express en Render (Blueprint).
+# Guía paso a paso: orientacion-legal/RENDER.md
+services:
+  - type: web
+    name: orientacion-legal
+    runtime: node
+    rootDir: orientacion-legal
+    buildCommand: npm ci
+    startCommand: npm start
+    plan: free
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MOCK_IA            # "1" = modo prueba sin IA. Borrarla cuando cargues la API key.
+        value: "1"
+      - key: ADMIN_PASSWORD     # la contraseña del tablero /admin (la elegís vos al crear)
+        sync: false
+      - key: SESSION_SECRET     # Render genera un valor al azar
+        generateValue: true
+      - key: ANTHROPIC_API_KEY  # dejar vacía mientras uses MOCK_IA
+        sync: false
+      - key: PAGO_ALIAS
+        sync: false
+      - key: PAGO_TITULAR
+        sync: false
+      - key: PAGO_MONTO
+        value: "20000"
+      - key: NOTIFY_WEBHOOK_URL # opcional, avisos al celular
+        sync: false
