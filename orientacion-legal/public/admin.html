@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Panel · Orientación Legal Express</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="admin">
+  <header class="top"><span class="marca">Panel de administración</span></header>
+  <main>
+    <section id="login">
+      <h1>Ingresar</h1>
+      <form id="form-login">
+        <label>Contraseña <input type="password" name="password" required autocomplete="current-password"></label>
+        <button class="btn primario" type="submit">Entrar</button>
+        <p class="error" id="err-login" hidden></p>
+      </form>
+    </section>
+
+    <section id="panel" hidden>
+      <div class="tabs" id="tabs">
+        <button data-estado="pendiente" class="activo">Pendientes</button>
+        <button data-estado="aprobado">Aprobados</button>
+        <button data-estado="rechazado">Rechazados</button>
+        <button data-estado="sin_pago">Sin pago</button>
+        <button data-estado="asesoramiento">Asesoramiento integral</button>
+      </div>
+      <div id="lista"></div>
+      <button class="btn-link" id="btn-salir">Cerrar sesión</button>
+    </section>
+  </main>
+  <script src="admin.js"></script>
+</body>
+</html>

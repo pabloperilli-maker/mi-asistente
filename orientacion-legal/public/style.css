@@ -1,0 +1,193 @@
+:root {
+  --azul: #1e3a5f;
+  --azul-claro: #2f5d8a;
+  --azul-fondo: #eaf1f8;
+  --gris: #5b6573;
+  --gris-claro: #e3e7ec;
+  --fondo: #f6f7f9;
+  --texto: #1c2430;
+  --rojo: #b42318;
+  --naranja: #b54708;
+  --verde: #067647;
+  --radio: 14px;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--texto);
+  background: var(--fondo);
+}
+
+.top { background: var(--azul); padding: 16px 20px; }
+.marca { color: #fff; font-weight: 700; text-decoration: none; font-size: 18px; }
+
+main { max-width: 560px; margin: 0 auto; padding: 20px 20px 40px; }
+
+h1 { font-size: 26px; line-height: 1.25; margin: 24px 0 12px; color: var(--azul); }
+h2 { font-size: 21px; margin: 32px 0 12px; color: var(--azul); }
+.lead { color: var(--gris); margin: 0 0 28px; }
+.nota { color: var(--gris); font-size: 15px; }
+.centro { text-align: center; }
+a { color: var(--azul-claro); }
+
+.aviso {
+  background: var(--azul-fondo);
+  border-left: 4px solid var(--azul-claro);
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 15px;
+  color: var(--azul);
+}
+
+.check { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 24px; font-size: 16px; }
+.check input { width: 24px; height: 24px; flex: none; margin-top: 2px; accent-color: var(--azul); }
+
+.btn {
+  display: block;
+  width: 100%;
+  min-height: 58px;
+  padding: 14px 20px;
+  border: 0;
+  border-radius: var(--radio);
+  font: inherit;
+  font-weight: 600;
+  font-size: 18px;
+  cursor: pointer;
+}
+.btn.primario { background: var(--azul); color: #fff; }
+.btn.primario:active { background: var(--azul-claro); }
+.btn.secundario { background: #fff; color: var(--azul); border: 2px solid var(--azul); }
+.btn:disabled { background: #a8b3c0; cursor: not-allowed; }
+
+.btn-chico {
+  border: 1px solid var(--gris-claro);
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--azul);
+  margin-left: 6px;
+}
+.btn-link {
+  display: block;
+  background: none;
+  border: 0;
+  padding: 12px 0;
+  font: inherit;
+  color: var(--azul-claro);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.btn-link.peligro { color: var(--rojo); font-size: 15px; }
+
+.tarjeta {
+  background: #fff;
+  border: 1px solid var(--gris-claro);
+  border-radius: var(--radio);
+  padding: 18px;
+  margin: 12px 0 20px;
+}
+.tarjeta.info { background: var(--azul-fondo); border-color: #c9d9ea; }
+.tarjeta.alerta { background: #fef3f2; border-color: #fecdca; }
+.tarjeta p { margin: 0 0 10px; }
+.tarjeta p:last-child { margin-bottom: 0; }
+
+.texto { white-space: pre-wrap; font: inherit; margin: 0; word-wrap: break-word; }
+
+.chip {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--gris-claro);
+}
+.chip.u-alta { background: #fee4e2; color: var(--rojo); }
+.chip.u-media { background: #fef0c7; color: var(--naranja); }
+.chip.u-baja { background: #dcfae6; color: var(--verde); }
+
+.bloqueado {
+  position: relative;
+  background: repeating-linear-gradient(45deg, #fff, #fff 10px, #f1f3f6 10px, #f1f3f6 20px);
+  border: 2px dashed #b9c3cf;
+  border-radius: var(--radio);
+  padding: 22px 20px;
+  margin: 0 0 20px;
+  color: var(--gris);
+}
+.bloqueado .candado { font-size: 34px; text-align: center; }
+.bloqueado p { text-align: center; margin: 4px 0 12px; color: var(--texto); }
+.bloqueado ul { margin: 0; padding-left: 20px; }
+
+.datos-pago {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px 16px;
+  background: #fff;
+  border: 1px solid var(--gris-claro);
+  border-radius: var(--radio);
+  padding: 18px;
+  margin: 0 0 12px;
+}
+.datos-pago dt { color: var(--gris); }
+.datos-pago dd { margin: 0; font-weight: 600; word-break: break-all; }
+.codigo { font-family: ui-monospace, Menlo, monospace; font-size: 20px; letter-spacing: 2px; color: var(--azul); }
+
+form label { display: block; margin: 0 0 18px; font-weight: 600; font-size: 16px; }
+form input, form textarea, form select {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 14px;
+  font: inherit;
+  font-weight: 400;
+  border: 1px solid #c4ccd6;
+  border-radius: 10px;
+  background: #fff;
+}
+form input[type="file"] { padding: 12px; }
+form input:focus, form textarea:focus { outline: 3px solid #b8d0ea; border-color: var(--azul-claro); }
+
+.error { color: var(--rojo); font-weight: 600; margin-top: 14px; }
+
+hr { border: 0; border-top: 1px solid var(--gris-claro); margin: 36px 0 12px; }
+
+.spinner {
+  width: 56px;
+  height: 56px;
+  margin: 80px auto 20px;
+  border: 5px solid var(--gris-claro);
+  border-top-color: var(--azul);
+  border-radius: 50%;
+  animation: girar 0.9s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+
+.pie { text-align: center; padding: 24px; font-size: 14px; color: var(--gris); }
+
+/* Páginas legales */
+.legal h1 { font-size: 24px; }
+.legal h2 { font-size: 19px; margin-top: 28px; }
+.borrador { background: #fef0c7; color: var(--naranja); padding: 10px 14px; border-radius: 8px; font-size: 15px; }
+
+/* Panel admin */
+.admin main { max-width: 900px; }
+.pedido { background: #fff; border: 1px solid var(--gris-claro); border-radius: var(--radio); padding: 16px; margin: 0 0 14px; }
+.pedido .fila { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 8px; }
+.pedido .acciones { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.pedido .acciones .btn { width: auto; min-height: 46px; font-size: 16px; padding: 10px 18px; }
+.pedido .acciones a { align-self: center; }
+.pedido pre { white-space: pre-wrap; font: inherit; color: var(--gris); margin: 6px 0; font-size: 15px; }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 18px; }
+.tabs button { border: 1px solid var(--gris-claro); background: #fff; border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 15px; cursor: pointer; }
+.tabs button.activo { background: var(--azul); color: #fff; border-color: var(--azul); }
+.estado { font-size: 13px; font-weight: 700; text-transform: uppercase; color: var(--gris); }

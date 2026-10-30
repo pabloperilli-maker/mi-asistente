@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1e3a5f">
+  <title>Orientación Legal Express</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <a href="/" class="marca">Orientación Legal Express</a>
+  </header>
+
+  <main>
+    <div class="aviso">Esto es orientación informativa y no reemplaza el asesoramiento de un abogado.</div>
+
+    <!-- 1. Inicio -->
+    <section id="v-inicio" class="vista">
+      <h1>¿Recibiste una carta documento, intimación o notificación?</h1>
+      <p class="lead">Sacale una foto o subí el PDF. Te explicamos en palabras simples qué es, qué te piden y qué plazos figuran.</p>
+
+      <label class="check">
+        <input type="checkbox" id="acepto">
+        <span>Acepto que mi documento se procese con IA y los <a href="terminos" target="_blank">Términos</a> y la <a href="privacidad" target="_blank">Política de Privacidad</a>.</span>
+      </label>
+
+      <input type="file" id="archivo" accept="image/*,application/pdf" hidden>
+      <button class="btn primario" id="btn-subir" disabled>Subir foto o PDF</button>
+      <p class="nota">Podés usar la cámara o elegir de la galería. Máximo 10 MB.</p>
+      <p class="error" id="err-inicio" hidden></p>
+    </section>
+
+    <!-- 2. Analizando -->
+    <section id="v-analizando" class="vista" hidden>
+      <div class="spinner" aria-hidden="true"></div>
+      <h2 class="centro">Analizando…</h2>
+      <p class="centro nota">Puede tardar hasta un minuto. No cierres esta pantalla.</p>
+    </section>
+
+    <!-- 3. Resultado -->
+    <section id="v-resultado" class="vista" hidden>
+      <span class="chip" id="urgencia"></span>
+      <div class="tarjeta">
+        <pre class="texto" id="adelanto"></pre>
+      </div>
+
+      <!-- Documento inválido -->
+      <div id="bloque-invalido" hidden>
+        <button class="btn primario" data-accion="nuevo">Subir otra foto</button>
+      </div>
+
+      <!-- Bloqueado: el resto NO está en el navegador hasta que se apruebe el pago -->
+      <div id="bloque-bloqueado" hidden>
+        <div class="bloqueado">
+          <div class="candado" aria-hidden="true">🔒</div>
+          <p><strong>Orientación completa</strong></p>
+          <ul>
+            <li>Qué te piden, en palabras simples</li>
+            <li>Plazos que figuran en el documento</li>
+            <li>Qué opciones tenés</li>
+            <li>Qué preparar para consultar a un abogado</li>
+            <li>Nivel de urgencia y por qué</li>
+          </ul>
+        </div>
+        <button class="btn primario" id="btn-pagar">Ver orientación completa – <span class="monto"></span></button>
+      </div>
+
+      <!-- Pago -->
+      <div id="bloque-pago" hidden>
+        <h2>Pagá por transferencia</h2>
+        <dl class="datos-pago">
+          <dt>Alias</dt><dd><span id="p-alias"></span> <button class="btn-chico" data-copiar="p-alias">Copiar</button></dd>
+          <dt>Titular</dt><dd id="p-titular"></dd>
+          <dt>Monto</dt><dd class="monto"></dd>
+          <dt>Concepto</dt><dd><strong class="codigo" id="p-codigo"></strong> <button class="btn-chico" data-copiar="p-codigo">Copiar</button></dd>
+        </dl>
+        <p class="nota">Poné el código <strong>en el concepto</strong> de la transferencia para que podamos identificar tu pago.</p>
+
+        <form id="form-comprobante">
+          <label>Comprobante de la transferencia
+            <input type="file" name="comprobante" accept="image/*,application/pdf" required>
+          </label>
+          <label>Tu WhatsApp o email
+            <input type="text" name="contacto" required minlength="6" maxlength="120" autocomplete="email" placeholder="11 2345 6789 o nombre@mail.com">
+          </label>
+          <button class="btn primario" type="submit">Enviar comprobante</button>
+          <p class="error" id="err-pago" hidden></p>
+        </form>
+      </div>
+
+      <!-- Pendiente -->
+      <div id="bloque-pendiente" hidden>
+        <div class="tarjeta info">
+          <p><strong>Recibimos tu comprobante.</strong></p>
+          <p>Estamos verificando el pago. Apenas se apruebe vas a ver la orientación completa en esta misma pantalla. Te avisamos también por el contacto que dejaste.</p>
+          <p class="nota">Código de tu pedido: <strong class="codigo" id="p-codigo2"></strong></p>
+        </div>
+        <button class="btn secundario" id="btn-refrescar">Ver si ya está aprobado</button>
+      </div>
+
+      <!-- Rechazado -->
+      <div id="bloque-rechazado" hidden>
+        <div class="tarjeta alerta">
+          <p><strong>No pudimos verificar el pago.</strong> Revisá que el monto y el código del concepto sean correctos y volvé a enviar el comprobante.</p>
+        </div>
+        <button class="btn primario" id="btn-reintentar-pago">Enviar comprobante de nuevo</button>
+      </div>
+
+      <!-- Completa -->
+      <div id="bloque-completa" hidden>
+        <h2>Orientación completa</h2>
+        <div class="tarjeta">
+          <pre class="texto" id="completa"></pre>
+        </div>
+
+        <h2>Asesoramiento integral</h2>
+        <p class="lead">Si querés que un abogado vea tu caso, dejanos tus datos y te contactamos.</p>
+        <form id="form-asesoramiento">
+          <label>Nombre y apellido <input name="nombre" required maxlength="100" autocomplete="name"></label>
+          <label>WhatsApp <input name="whatsapp" type="tel" maxlength="40" autocomplete="tel"></label>
+          <label>Email <input name="email" type="email" maxlength="120" autocomplete="email"></label>
+          <label>Resumen del caso <textarea name="resumen" required maxlength="2000" rows="5"></textarea></label>
+          <label>Horario preferido para contactarte <input name="horario" maxlength="100" placeholder="Ej.: lunes a viernes de 9 a 13"></label>
+          <button class="btn primario" type="submit">Pedir asesoramiento</button>
+          <p class="error" id="err-ases" hidden></p>
+        </form>
+        <div id="ases-ok" class="tarjeta info" hidden><p><strong>¡Listo!</strong> Recibimos tus datos y te vamos a contactar.</p></div>
+      </div>
+
+      <hr>
+      <button class="btn-link" data-accion="nuevo">Analizar otro documento</button>
+      <button class="btn-link peligro" id="btn-eliminar">Eliminar mi documento y mis datos</button>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <a href="terminos">Términos</a> · <a href="privacidad">Privacidad</a>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
