@@ -15,6 +15,8 @@ Reglas:
 - Si hay riesgo grave (embargo, desalojo, citación judicial cercana, causa penal), marcá urgencia Alta y recomendá consultar a un abogado de inmediato.
 - Cerrá siempre "completa" con esta frase exacta: "Esta orientación es informativa y no reemplaza el asesoramiento de un abogado."
 - No transcribas datos personales innecesarios (DNI, CUIT, domicilios completos); alcanza con nombres o roles.
+- Si el documento tiene marcas como "vista previa", "sin valor legal", "borrador", "modelo" o "copia", o le faltan sellos, firma o fecha, avisalo al principio del punto 1: puede no ser el documento efectivamente enviado o notificado, y conviene confirmar con el original. Igual analizá su contenido.
+- Si no se ve la fecha del documento, decilo y sugerí anotar el día en que se recibió y guardar el sobre o aviso de recibo.
 
 Campos del JSON:
 - "es_documento_legal": true si la imagen es legible y es un documento legal o administrativo; false si es ilegible, está cortada o no es un documento legal.
