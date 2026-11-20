@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#111418" />
+<meta name="description" content="Rutina de gimnasio personalizada con progresión de cargas, temporizador de descanso y técnica de cada ejercicio." />
+<title>Rutina Gim</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icon.svg" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="view" class="view"></main>
+
+  <nav class="tabbar" id="tabbar" hidden>
+    <button data-tab="hoy" class="tab active" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+      <span>Hoy</span>
+    </button>
+    <button data-tab="rutina" class="tab" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 10h2V7h3v10H4v-3H2zm5 1h10v2H7zm10-4h3v3h2v4h-2v3h-3z"/></svg>
+      <span>Rutina</span>
+    </button>
+    <button data-tab="progreso" class="tab" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18v1.5H3zM4 17l5-6 4 3 6-8 1.5 1.2-7.2 9.6-4-3L5.2 18z"/></svg>
+      <span>Progreso</span>
+    </button>
+    <button data-tab="perfil" class="tab" type="button">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zm0 2c-4.4 0-8 2.2-8 5v2h16v-2c0-2.8-3.6-5-8-5z"/></svg>
+      <span>Perfil</span>
+    </button>
+  </nav>
+
+  <!-- Entrenamiento en curso (pantalla completa) -->
+  <section id="workout" class="workout" hidden></section>
+
+  <!-- Temporizador de descanso -->
+  <div id="restBar" class="restbar" hidden>
+    <div class="restbar-progress"><div id="restFill"></div></div>
+    <div class="restbar-row">
+      <button type="button" class="rb-btn" data-action="rest-add" data-sec="-15">−15</button>
+      <div class="restbar-center">
+        <div class="restbar-label" id="restLabel">Descanso</div>
+        <div class="restbar-time" id="restTime">0:00</div>
+      </div>
+      <button type="button" class="rb-btn" data-action="rest-add" data-sec="15">+15</button>
+    </div>
+    <div class="restbar-next" id="restNext"></div>
+    <button type="button" class="rb-skip" data-action="rest-skip">Saltar descanso</button>
+  </div>
+
+  <!-- Modal genérico -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-backdrop" data-action="modal-close"></div>
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <button class="modal-x" type="button" data-action="modal-close" aria-label="Cerrar">×</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="exercises.js"></script>
+  <script src="engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
