@@ -1413,6 +1413,12 @@
   }
   if (S.lock) showLock();
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => reg.update()).catch(() => {}));
+    // Cuando se instala una versión nueva de la app, recargar una vez para usarla.
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloaded || S.active) return;
+      reloaded = true; location.reload();
+    });
   }
 })();
