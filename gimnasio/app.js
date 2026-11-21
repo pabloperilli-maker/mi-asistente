@@ -300,7 +300,10 @@
     const plan = E.buildPlan(S.profile);
     S.profile.plannedDays = plan.daysPerWeek;
     plan.nextIdx = 0;
-    S.plan = plan;
+    if (S.plan && S.plan.custom) {
+      S.autoPlan = plan; // se mantiene la rutina propia; la automática queda guardada
+      S.plan.weekdays = E.spreadDays(p.weekdays, S.plan.days.length);
+    } else S.plan = plan;
     if (isNew) {
       S.bw.push({ date: new Date().toISOString(), kg: p.weight });
     } else if (!S.bw.length || S.bw[S.bw.length - 1].kg !== p.weight) {
@@ -325,6 +328,83 @@
   }
 
   // ------------------------------------------------------------------
+  // Rutinas propias (del profe) con valores por semana
+  // ------------------------------------------------------------------
+  // weeks: [series, reps, kg] por semana. perSide = reps por lado.
+  const PROFE_PLAN = {
+    name: 'Rutina del profe (3 días, 4 semanas)',
+    days: [
+      { name: 'Día 1', focus: 'Cuádriceps · pecho · tríceps', items: [
+        { exId: 'sentadilla_espanola', role: 'main', weeks: [[4, 8, 12.5], [4, 8, 12.5], [4, 8, 15], [4, 8, 15]] },
+        { exId: 'prensa_horizontal', role: 'main', weeks: [[4, 12, 50], [4, 12, 50], [4, 12, 55], [4, 12, 55]] },
+        { exId: 'press_banca', role: 'main', weeks: [[4, 6, 30], [4, 6, 30], [4, 6, 32.5], [4, 6, 32.5]] },
+        { exId: 'press_maquina_neutra', role: 'main', weeks: [[4, 6, 30], [4, 6, 30], [4, 6, 35], [4, 6, 35]] },
+        { exId: 'triceps_polea_1brazo', role: 'acc', perSide: true, weeks: [[3, 8, 10], [3, 8, 10], [3, 8, 15], [3, 8, 11.25]] }
+      ] },
+      { name: 'Día 2', focus: 'Isquiotibiales · espalda · bíceps', items: [
+        { exId: 'rumano_db_disco', role: 'main', weeks: [[4, 8, 17.5], [4, 8, 17.5], [4, 8, 20], [4, 8, 20]] },
+        { exId: 'curl_femoral', role: 'acc', weeks: [[3, 10, 30], [3, 10, 30], [3, 10, 30], [3, 10, 30]] },
+        { exId: 'jalon', role: 'main', weeks: [[4, 12, 55], [4, 12, 55], [4, 12, 60], [4, 12, 60]] },
+        { exId: 'remo_estocada', role: 'main', perSide: true, weeks: [[4, 8, 35], [4, 8, 35], [4, 8, 40], [4, 8, 40]] },
+        { exId: 'biceps_polea_soga', role: 'acc', weeks: [[3, 10, 25], [3, 10, 25], [3, 10, 30], [3, 10, 30]] }
+      ] },
+      { name: 'Día 3', focus: 'Glúteos · hombros · espalda', items: [
+        { exId: 'hip_thrust', role: 'main', weeks: [[4, 8, 65], [4, 8, 65], [4, 6, 70], [4, 6, 70]] },
+        { exId: 'abductor', role: 'acc', weeks: [[3, 12, 30], [3, 12, 30], [3, 10, 35], [3, 10, 35]] },
+        { exId: 'vuelos_frontales_soga', role: 'acc', weeks: [[3, 10, 15], [3, 10, 15], [3, 10, 20], [3, 10, 20]] },
+        { exId: 'serrucho', role: 'main', perSide: true, weeks: [[3, 8, 15], [3, 8, 15], [3, 8, 17.5], [3, 8, 17.5]] },
+        { exId: 'vuelos_posteriores_banco', role: 'acc', weeks: [[3, 8, 30], [3, 8, 30], [3, 8, 32.5], [3, 8, 32.5]] }
+      ] }
+    ]
+  };
+
+  function buildCustomPlan(tpl) {
+    const p = S.profile;
+    const days = tpl.days.map((d) => ({
+      name: d.name, focus: d.focus,
+      items: d.items.map((it) => ({
+        exId: it.exId, role: it.role, perSide: !!it.perSide,
+        rest: it.role === 'main' ? 120 : 75, rir: 2,
+        weeks: it.weeks.map(([sets, reps, kgv]) => ({ sets, reps, kg: kgv }))
+      }))
+    }));
+    const nWeeks = Math.max(...days.flatMap((d) => d.items.map((i) => i.weeks.length)));
+    return {
+      custom: true, id: uid(), createdAt: new Date().toISOString(),
+      split: tpl.name, weekdays: E.spreadDays(p.weekdays && p.weekdays.length ? p.weekdays : [1, 3, 5], days.length),
+      daysPerWeek: days.length, nWeeks, week: 1, nextIdx: 0,
+      recDays: { why: 'Rutina cargada a partir de la planilla de tu profesor/a.' },
+      days
+    };
+  }
+
+  const curWeek = () => Math.min(S.plan.week || 1, S.plan.nWeeks || 1);
+  const pastPlan = () => S.plan.custom && (S.plan.week || 1) > S.plan.nWeeks;
+
+  // Devuelve el ítem con series/reps de la semana actual (rutinas propias).
+  function resolve(it) {
+    if (!it.weeks) return it;
+    const w = it.weeks[Math.min(curWeek(), it.weeks.length) - 1] || it.weeks[it.weeks.length - 1];
+    return { ...it, sets: w.sets, lo: w.reps, hi: w.reps, kgWeek: w.kg };
+  }
+  const rng = (it) => (it.lo === it.hi ? `${it.lo}` : `${it.lo}–${it.hi}`);
+  const sideTxt = (it) => (it.perSide ? ' por lado' : '');
+
+  function cyc() {
+    if (S.plan.custom) return { isDeload: false, week: curWeek(), every: S.plan.nWeeks };
+    return E.cycleInfo(S.plan, S.profile);
+  }
+
+  function customRec(r) {
+    if (!pastPlan() && r.kgWeek != null) {
+      return { kind: 'start', w: r.kgWeek, perHand: BY_ID[r.exId].tool === 'mancuernas', msg: `Semana ${curWeek()} de tu rutina: ${r.sets} × ${r.lo}${sideTxt(r)}${r.kgWeek != null ? ` con ${kg(r.kgWeek)}` : ''}. Si te sobra mucho, avisale a tu profe.` };
+    }
+    const rec = E.recommend(r, S.logs, S.profile, false);
+    if (pastPlan()) rec.msg = `Terminaste las ${S.plan.nWeeks} semanas. ${rec.msg} Pedile a tu profe la próxima etapa.`;
+    return rec;
+  }
+
+  // ------------------------------------------------------------------
   // HOY
   // ------------------------------------------------------------------
   function weekStart(d = new Date()) {
@@ -344,11 +424,19 @@
     return n;
   }
 
+  function weekPicker() {
+    const n = S.plan.nWeeks; const w = S.plan.week || 1;
+    return `<section class="card"><div class="row between"><h3>Semana de la rutina</h3><span class="pill">${w > n ? 'ciclo terminado' : `${w} de ${n}`}</span></div>
+      <div class="chips">${[...Array(n)].map((_, i) => `<button class="wk ${w === i + 1 ? 'on' : ''}" data-action="set-week" data-w="${i + 1}">Sem ${i + 1}</button>`).join('')}
+      <button class="wk ${w > n ? 'on' : ''}" data-action="set-week" data-w="${n + 1}">Seguir progresando</button></div>
+      <p class="small muted">La semana avanza sola cuando completás los ${S.plan.days.length} días. También podés elegirla a mano.</p></section>`;
+  }
+
   function viewHoy() {
     const p = S.profile; const plan = S.plan;
     const idx = (plan.nextIdx || 0) % plan.days.length;
     const day = plan.days[idx];
-    const cyc = E.cycleInfo(plan, p);
+    const cycI = cyc();
     const ws = weekStart();
     const doneDays = new Set(S.logs.map((l) => dayKey(new Date(l.date))));
     const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -365,7 +453,7 @@
     const isTrainingDay = plan.weekdays.includes(new Date().getDay());
     const trainedToday = doneDays.has(dayKey(new Date()));
     const hello = p.name ? `Hola, ${esc(p.name)}` : 'Hola';
-    const items = cyc.isDeload ? day.items.map(E.deloadItem) : day.items;
+    const items = cycI.isDeload ? day.items.map(E.deloadItem) : day.items.map(resolve);
     const tip = TIPS[Math.floor(Date.now() / 864e5) % TIPS.length];
 
     return `
@@ -383,14 +471,14 @@
       <p class="muted small">${trainedToday ? '¡Hoy ya entrenaste! Descansá, comé bien y dormí 7–9 h.' : isTrainingDay ? 'Hoy es día de entrenamiento.' : 'Hoy es día de descanso según tu plan (podés entrenar igual si te salteaste uno).'}</p>
     </section>
 
-    ${cyc.isDeload ? `<section class="card warn"><b>Semana de descarga (${cyc.week}/${cyc.every})</b><p class="small">Esta semana bajamos series y cargas para que el cuerpo asimile lo entrenado. Es parte del plan: volvés más fuerte. Podés desactivarlo en Perfil.</p></section>` : `<p class="muted small center">Bloque de entrenamiento: semana ${cyc.week} de ${cyc.every} (la última es de descarga)</p>`}
+    ${cycI.isDeload ? `<section class="card warn"><b>Semana de descarga (${cycI.week}/${cycI.every})</b><p class="small">Esta semana bajamos series y cargas para que el cuerpo asimile lo entrenado. Es parte del plan: volvés más fuerte. Podés desactivarlo en Perfil.</p></section>` : plan.custom ? weekPicker() : `<p class="muted small center">Bloque de entrenamiento: semana ${cycI.week} de ${cycI.every} (la última es de descarga)</p>`}
 
     <section class="card next">
       <small class="muted">Próxima sesión · Día ${idx + 1} de ${plan.days.length}</small>
       <h2>${esc(day.name)}</h2>
       <p class="muted">${esc(day.focus)} · ~${E.dayMinutes({ items })} min</p>
       <ul class="ex-mini">
-        ${items.map((it) => { const ex = BY_ID[it.exId]; return `<li><img src="${img(ex)}" alt="" loading="lazy"/><span>${esc(ex.n)}</span><em>${it.cardio ? `${it.lo} min` : `${it.sets}×${it.lo}–${it.hi}${ex.time ? ' s' : ''}`}</em></li>`; }).join('')}
+        ${items.map((it) => { const ex = BY_ID[it.exId]; return `<li><img src="${img(ex)}" alt="" loading="lazy"/><span>${esc(ex.n)}</span><em>${it.cardio ? `${it.lo} min` : `${it.sets}×${rng(it)}${ex.time ? ' s' : ''}${it.kgWeek != null ? ` · ${fmtN(it.kgWeek)} kg` : ''}`}</em></li>`; }).join('')}
       </ul>
       <button class="btn btn-primary btn-block big" data-action="start" data-day="${idx}">${S.active ? 'Continuar entrenamiento' : 'Empezar entrenamiento'}</button>
       <button class="btn btn-ghost btn-block" data-action="pick-day">Elegir otro día de la rutina</button>
@@ -426,16 +514,22 @@
       <h3>${esc(plan.split)}</h3>
       <p class="small">Días: <b>${plan.weekdays.map((d) => E.DAY_NAMES_LONG[d]).join(', ')}</b></p>
       <p class="muted small">${esc(rd.why)}</p>
-      <p class="muted small">Objetivo: ${E.GOALS[p.goal]} · ${E.EQUIP[p.equipment]} · ${p.sessionMin} min por sesión</p>
+      ${plan.custom ? `<p class="small">Mostrando la <b>semana ${Math.min(plan.week || 1, plan.nWeeks)}</b> de ${plan.nWeeks}. Tocá ✎ para ver o cambiar series, reps y kilos de cada semana.</p>` : `<p class="muted small">Objetivo: ${E.GOALS[p.goal]} · ${E.EQUIP[p.equipment]} · ${p.sessionMin} min por sesión</p>`}
+      <div class="row gap wrap">
+        ${plan.custom
+          ? `<button class="btn btn-sm btn-ghost" data-action="use-auto">Volver a la rutina automática</button>`
+          : `<button class="btn btn-sm" data-action="load-profe">Usar la rutina de mi profe</button>`}
+      </div>
     </section>
 
     ${plan.days.map((d, di) => `
       <section class="card day">
-        <div class="row between"><h3>Día ${di + 1}: ${esc(d.name)}</h3><span class="pill">~${E.dayMinutes(d)} min</span></div>
+        <div class="row between"><h3>Día ${di + 1}: ${esc(d.name)}</h3><span class="pill">~${E.dayMinutes({ items: d.items.map(resolve) })} min</span></div>
         <p class="muted small">${esc(d.focus)}</p>
         <ul class="plan-list">
           ${d.items.map((it, ii) => planRow(it, di, ii)).join('')}
         </ul>
+        ${plan.custom ? `<button class="link small" data-action="add-ex" data-d="${di}">+ Agregar ejercicio</button>` : ''}
       </section>`).join('')}
 
     <section class="card">
@@ -462,9 +556,12 @@
     </section>`;
   }
 
-  function planRow(it, di, ii) {
+  function planRow(it0, di, ii) {
+    const it = resolve(it0);
     const ex = BY_ID[it.exId];
-    const label = it.cardio ? `${it.lo} min` : `${it.sets} × ${it.lo}–${it.hi} ${ex.time ? 's' : 'reps'} · RIR ${it.rir} · desc. ${restTxt(it.rest)}`;
+    const label = it.cardio ? `${it.lo} min` : it0.weeks
+      ? `${it.sets} × ${rng(it)}${sideTxt(it)}${it.kgWeek != null ? ` · ${fmtN(it.kgWeek)} kg${ex.tool === 'mancuernas' ? ' c/u' : ''}` : ''} · desc. ${restTxt(it.rest)}`
+      : `${it.sets} × ${rng(it)} ${ex.time ? 's' : 'reps'} · RIR ${it.rir} · desc. ${restTxt(it.rest)}`;
     return `<li class="plan-row">
       <button class="thumb" data-action="tech" data-ex="${ex.id}" aria-label="Ver técnica"><img src="${img(ex)}" alt="" loading="lazy"/></button>
       <div class="plan-info" data-action="tech" data-ex="${ex.id}">
@@ -479,8 +576,37 @@
     </li>`;
   }
 
+  function addExModal(di) {
+    const list = Ex.EXERCISES.filter((e) => e.eq.includes(S.profile.equipment) && e.p !== 'cardio')
+      .sort((a, b) => (PATTERN_NAMES[a.p] || '').localeCompare(PATTERN_NAMES[b.p] || '') || a.n.localeCompare(b.n));
+    openModal(`<h3>Agregar ejercicio al día ${di + 1}</h3>
+      <input id="exSearch" class="search" placeholder="Buscar (ej.: remo, bíceps, polea)"/>
+      <ul class="alt-list" id="exList">${list.map((a) => `
+        <li data-q="${esc((a.n + ' ' + a.m + ' ' + (PATTERN_NAMES[a.p] || '')).toLowerCase())}"><button data-action="do-add" data-d="${di}" data-to="${a.id}">
+          <img src="${img(a)}" alt="" loading="lazy"/><span><b>${esc(a.n)}</b><small>${esc(PATTERN_NAMES[a.p] || '')} · ${esc(a.m)}</small></span></button></li>`).join('')}</ul>`, 'tall');
+  }
+
   function editItemModal(di, ii) {
     const it = S.plan.days[di].items[ii]; const ex = BY_ID[it.exId];
+    if (it.weeks) {
+      openModal(`
+        <h3>${esc(ex.n)}</h3>
+        <form id="editWeeksForm" data-d="${di}" data-i="${ii}" class="form">
+          <table class="wk-table"><thead><tr><th>Sem</th><th>Series</th><th>Reps</th><th>Kg${ex.tool === 'mancuernas' ? ' c/u' : ''}</th></tr></thead><tbody>
+          ${it.weeks.map((w, k) => `<tr><td>${k + 1}</td>
+            <td><input name="s${k}" inputmode="numeric" value="${w.sets}"/></td>
+            <td><input name="r${k}" inputmode="numeric" value="${w.reps}"/></td>
+            <td><input name="k${k}" inputmode="decimal" value="${w.kg != null ? fmtN(w.kg) : ''}"/></td></tr>`).join('')}
+          </tbody></table>
+          <label class="check-inline"><input type="checkbox" name="perSide" ${it.perSide ? 'checked' : ''}/> Repeticiones por lado (ejercicio a un brazo/pierna)</label>
+          <label class="field"><span>Descanso entre series</span>
+            <select name="rest">${[30, 45, 60, 75, 90, 120, 150, 180, 240].map((x) => `<option value="${x}" ${it.rest === x ? 'selected' : ''}>${restTxt(x)}</option>`).join('')}</select>
+          </label>
+          <button class="btn btn-primary btn-block" type="submit">Guardar</button>
+          <button class="btn btn-ghost btn-block danger" type="button" data-action="del-item" data-d="${di}" data-i="${ii}">Quitar ejercicio de la rutina</button>
+        </form>`);
+      return;
+    }
     openModal(`
       <h3>${esc(ex.n)}</h3>
       <form id="editItemForm" data-d="${di}" data-i="${ii}" class="form">
@@ -512,23 +638,30 @@
         : '<p>No hay alternativas para tu equipamiento y zonas a cuidar.</p>'}`);
   }
 
+  // Al cambiar un ejercicio de una rutina propia se conservan series/reps por semana (los kg no, porque es otro ejercicio).
+  function keepCustom(ni, old) {
+    if (!old.weeks) return ni;
+    return { ...ni, perSide: old.perSide, weeks: old.weeks.map((w) => ({ ...w, kg: null })) };
+  }
+
   function doSwap(btn) {
     const to = btn.dataset.to; const ex = BY_ID[to];
     const g = E.goalParams(S.profile);
     if (btn.dataset.w != null) {
       const wi = +btn.dataset.w; const it = S.active.items[wi];
-      const ni = { ...E.makeItem(ex, it.role, g, S.profile), sets: it.sets, rest: it.rest };
+      let ni = { ...E.makeItem(ex, it.role, g, S.profile), sets: it.sets, rest: it.rest };
+      if (it.weeks) ni = { ...ni, lo: it.lo, hi: it.hi };
       if (S.active.deload) Object.assign(ni, E.deloadItem(ni));
       ni.rec = E.recommend(ni, S.logs, S.profile, S.active.deload);
       ni.rows = buildRows(ni);
       S.active.items[wi] = ni;
       // también en el plan, para las próximas sesiones
       const pi = S.plan.days[S.active.dayIdx].items.findIndex((x) => x.exId === it.exId);
-      if (pi >= 0) { const old = S.plan.days[S.active.dayIdx].items[pi]; S.plan.days[S.active.dayIdx].items[pi] = { ...E.makeItem(ex, old.role, g, S.profile), sets: old.sets, rest: old.rest }; }
+      if (pi >= 0) { const old = S.plan.days[S.active.dayIdx].items[pi]; S.plan.days[S.active.dayIdx].items[pi] = keepCustom({ ...E.makeItem(ex, old.role, g, S.profile), sets: old.sets, rest: old.rest }, old); }
       save(); closeModal(); renderWorkout();
     } else {
       const d = +btn.dataset.d; const i = +btn.dataset.i; const old = S.plan.days[d].items[i];
-      S.plan.days[d].items[i] = { ...E.makeItem(ex, old.role, g, S.profile), sets: old.sets, rest: old.rest };
+      S.plan.days[d].items[i] = keepCustom({ ...E.makeItem(ex, old.role, g, S.profile), sets: old.sets, rest: old.rest }, old);
       save(); closeModal(); render();
     }
     toast(`Cambiado por ${ex.n}`);
@@ -594,15 +727,15 @@
   function startWorkout(dayIdx) {
     if (S.active) { openWorkout(); return; }
     audio();
-    const cyc = E.cycleInfo(S.plan, S.profile);
+    const cy = cyc();
     const day = S.plan.days[dayIdx];
     const items = day.items.map((it0) => {
-      const it = cyc.isDeload ? E.deloadItem(it0) : { ...it0 };
-      it.rec = E.recommend(it, S.logs, S.profile, cyc.isDeload);
+      const it = cy.isDeload ? E.deloadItem(it0) : { ...resolve(it0) };
+      it.rec = it0.weeks ? customRec(it) : E.recommend(it, S.logs, S.profile, cy.isDeload);
       it.rows = buildRows(it);
       return it;
     });
-    S.active = { id: uid(), dayIdx, startedAt: Date.now(), deload: cyc.isDeload, items };
+    S.active = { id: uid(), dayIdx, startedAt: Date.now(), deload: cy.isDeload, items, week: S.plan.custom ? (S.plan.week || 1) : null, planId: S.plan.id || null };
     save();
     openWorkout();
   }
@@ -675,7 +808,7 @@
         <div class="set-row ${r.done ? 'done' : ''}">
           <span class="set-n">${s + 1}</span>
           ${ex.r != null ? `<label class="set-in"><input data-field="w" data-i="${i}" data-s="${s}" inputmode="decimal" value="${r.w != null ? fmtN(r.w) : ''}" placeholder="kg"/><small>${wLabel}</small></label>` : '<span class="set-bw">corporal</span>'}
-          <label class="set-in"><input data-field="reps" data-i="${i}" data-s="${s}" inputmode="numeric" value="${r.reps ?? ''}" placeholder="${it.lo}–${it.hi}"/><small>${unit}</small></label>
+          <label class="set-in"><input data-field="reps" data-i="${i}" data-s="${s}" inputmode="numeric" value="${r.reps ?? ''}" placeholder="${rng(it)}"/><small>${unit}</small></label>
           ${ex.time && !r.done ? `<button class="icon-btn" data-action="time-set" data-i="${i}" data-s="${s}" aria-label="Cronometrar">⏱</button>` : ''}
           <button class="check" data-action="set-done" data-i="${i}" data-s="${s}" aria-label="${r.done ? 'Desmarcar' : 'Completar'} serie">✓</button>
         </div>`).join('');
@@ -687,7 +820,7 @@
         <button class="thumb" data-action="tech" data-ex="${ex.id}" aria-label="Ver técnica"><img src="${img(ex)}" alt="" loading="lazy"/><span>Técnica</span></button>
         <div>
           <b>${esc(ex.n)}</b>
-          <small>${it.cardio ? `${it.lo} min` : `${it.sets} × ${it.lo}–${it.hi} ${unit} · RIR ${it.rir} · descanso ${restTxt(it.rest)}`}</small>
+          <small>${it.cardio ? `${it.lo} min` : `${it.sets} × ${rng(it)} ${unit}${sideTxt(it)}${it.weeks ? '' : ` · RIR ${it.rir}`} · descanso ${restTxt(it.rest)}`}</small>
         </div>
         <button class="icon-btn" data-action="swap-w" data-w="${i}" aria-label="Cambiar ejercicio">⇄</button>
       </div>
@@ -710,7 +843,7 @@
       const it = a.items[i]; const s = it.rows.findIndex((r) => !r.done);
       if (s >= 0) {
         const ex = BY_ID[it.exId]; const r = it.rows[s];
-        return `Siguiente: <b>${esc(ex.n)}</b> — serie ${s + 1}/${it.rows.length}${r.w != null ? ` · ${kg(r.w)}` : ''} × ${it.cardio ? `${it.lo} min` : `${it.lo}–${it.hi}`}`;
+        return `Siguiente: <b>${esc(ex.n)}</b> — serie ${s + 1}/${it.rows.length}${r.w != null ? ` · ${kg(r.w)}` : ''} × ${it.cardio ? `${it.lo} min` : rng(it) + sideTxt(it)}`;
       }
     }
     return 'Era la última serie. ¡Terminá el entrenamiento!';
@@ -782,8 +915,18 @@
     const volume = entries.reduce((s, e) => s + e.sets.reduce((x, y) => x + (y.w || 0) * y.reps * (BY_ID[e.exId].tool === 'mancuernas' ? 2 : 1), 0), 0);
     const durationSec = Math.round((Date.now() - a.startedAt) / 1000);
     const day = S.plan.days[a.dayIdx];
-    S.logs.push({ id: a.id, date: new Date().toISOString(), dayIdx: a.dayIdx, dayName: day.name, deload: a.deload, durationSec, volume: Math.round(volume), entries });
+    S.logs.push({ id: a.id, date: new Date().toISOString(), dayIdx: a.dayIdx, dayName: day.name, deload: a.deload, durationSec, volume: Math.round(volume), entries, week: a.week, planId: a.planId });
     S.plan.nextIdx = (a.dayIdx + 1) % S.plan.days.length;
+    let weekMsg = '';
+    if (S.plan.custom && a.week != null && a.week === (S.plan.week || 1) && a.week <= S.plan.nWeeks) {
+      const doneIdx = new Set(S.logs.filter((l) => l.planId === S.plan.id && l.week === a.week).map((l) => l.dayIdx));
+      if (S.plan.days.every((_, i) => doneIdx.has(i))) {
+        S.plan.week = a.week + 1; S.plan.nextIdx = 0;
+        weekMsg = S.plan.week > S.plan.nWeeks
+          ? `<p><b>¡Completaste las ${S.plan.nWeeks} semanas de tu rutina!</b> Desde ahora la app sugiere cargas con progresión automática. Pedile a tu profe la próxima etapa.</p>`
+          : `<p><b>¡Semana ${a.week} completa!</b> Pasás a la semana ${S.plan.week}.</p>`;
+      }
+    }
     S.active = null; save();
     stopTimer(); closeWorkout(); tab = 'hoy'; render();
     const setsN = entries.reduce((s, e) => s + e.sets.length, 0);
@@ -797,6 +940,7 @@
           <div><b>${Math.round(volume).toLocaleString('es-AR')}</b><small>kg de volumen</small></div>
         </div>
         ${prs.length ? `<h4>Nuevos récords (1RM estimado)</h4><ul class="prs">${prs.map((p) => `<li>⭐ ${esc(p.n)}: ${kg(Math.round(p.v * 10) / 10)} <small class="muted">(antes ${kg(Math.round(p.prev * 10) / 10)})</small></li>`).join('')}</ul>` : ''}
+        ${weekMsg}
         <p class="small muted">La próxima vez la app ajusta las cargas según lo que registraste. Ahora: proteína, agua y buen descanso.</p>
         <button class="btn btn-primary btn-block" data-action="modal-close">Listo</button>
       </div>`);
@@ -954,6 +1098,21 @@
     <section class="card"><h3>Editar datos y objetivos</h3>${profileForm(p, false)}</section>
 
     <section class="card">
+      <h3>Contraseña</h3>
+      ${S.lock ? `<p class="small">🔒 La app pide contraseña al abrirse y después de ${LOCK_AFTER_MIN} minutos en segundo plano.</p>` : '<p class="small muted">Protegé tus datos con una contraseña o PIN: se pide cada vez que abrís la app.</p>'}
+      <form id="pwForm" class="form">
+        ${S.lock ? '<label class="field"><span>Contraseña actual</span><input name="cur" type="password" autocomplete="current-password" required/></label>' : ''}
+        <label class="field"><span>${S.lock ? 'Nueva contraseña' : 'Contraseña o PIN'} (mín. 4 caracteres)</span><input name="pw" type="password" autocomplete="new-password" minlength="4" ${S.lock ? '' : 'required'}/></label>
+        <label class="field"><span>Repetila</span><input name="pw2" type="password" autocomplete="new-password"/></label>
+        <div class="row gap wrap">
+          <button class="btn btn-sm btn-primary" type="submit">${S.lock ? 'Cambiar contraseña' : 'Activar contraseña'}</button>
+          ${S.lock ? '<button class="btn btn-sm danger" type="button" data-action="pw-remove">Quitar contraseña</button>' : ''}
+        </div>
+      </form>
+      <p class="small muted">Si la olvidás, la única forma de entrar es borrar los datos de la app: exportá una copia de seguridad cada tanto.</p>
+    </section>
+
+    <section class="card">
       <h3>Reiniciar</h3>
       <button class="btn btn-sm btn-ghost" data-action="restart-cycle">Reiniciar bloque (semana 1)</button>
       <button class="btn btn-sm danger" data-action="reset-all">Borrar todos los datos</button>
@@ -973,6 +1132,28 @@
     const d = el.dataset;
     switch (act) {
       case 'modal-close': closeModal(); break;
+      case 'load-profe':
+        if (S.active) { toast('Terminá o descartá el entrenamiento en curso primero'); break; }
+        if (!confirm('Se cargará la rutina de tu profe (3 días, 4 semanas) con sus series, repeticiones y kilos. Tu rutina automática queda guardada para volver cuando quieras. ¿Continuar?')) break;
+        S.autoPlan = S.plan; S.plan = S.customPlan || buildCustomPlan(PROFE_PLAN); S.customPlan = null; save(); render(); toast('Rutina del profe cargada');
+        break;
+      case 'use-auto':
+        if (S.active) { toast('Terminá o descartá el entrenamiento en curso primero'); break; }
+        if (!confirm('¿Volver a la rutina automática? La rutina de tu profe queda guardada (con tus cambios) para volver a cargarla.')) break;
+        S.customPlan = S.plan; S.plan = S.autoPlan || E.buildPlan(S.profile); if (S.plan.nextIdx == null) S.plan.nextIdx = 0; save(); render();
+        break;
+      case 'set-week': S.plan.week = +d.w; S.plan.nextIdx = 0; save(); render(); toast(+d.w > S.plan.nWeeks ? 'Progresión automática' : `Semana ${d.w}`); break;
+      case 'add-ex': addExModal(+d.d); break;
+      case 'do-add': {
+        const day = S.plan.days[+d.d]; const ex = BY_ID[d.to];
+        day.items.push({ exId: ex.id, role: ex.c ? 'main' : 'acc', perSide: false, rest: ex.c ? 120 : 75, rir: 2, weeks: [...Array(S.plan.nWeeks)].map(() => ({ sets: 3, reps: 10, kg: null })) });
+        save(); closeModal(); render(); editItemModal(+d.d, day.items.length - 1);
+        break;
+      }
+      case 'del-item':
+        if (S.plan.days[+d.d].items.length <= 1) { toast('El día tiene que tener al menos un ejercicio'); break; }
+        if (confirm('¿Quitar este ejercicio de la rutina?')) { S.plan.days[+d.d].items.splice(+d.i, 1); save(); closeModal(); render(); }
+        break;
       case 'start': startWorkout(+d.day); break;
       case 'resume': openWorkout(); break;
       case 'pick-day':
@@ -1026,6 +1207,10 @@
       save();
     }
     if (t.dataset.setting === 'volume') { S.settings.volume = +t.value; save(); }
+    if (t.id === 'exSearch') {
+      const q = t.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      document.querySelectorAll('#exList li').forEach((li) => { li.hidden = q && !li.dataset.q.normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q); });
+    }
   });
 
   document.addEventListener('change', async (ev) => {
@@ -1064,6 +1249,18 @@
           <p class="small">Tocá cualquier ejercicio para ver la técnica (imágenes y video). Las cargas de la primera sesión son estimaciones prudentes: ajustalas y la app aprende de lo que registres.</p>
           <button class="btn btn-primary btn-block" data-action="modal-close">Ver mi rutina</button>`);
       } else toast('Rutina actualizada');
+      return;
+    }
+    if (f.id === 'editWeeksForm') {
+      const it = S.plan.days[+f.dataset.d].items[+f.dataset.i];
+      const fd = new FormData(f);
+      for (let k = 0; k < it.weeks.length; k++) {
+        const sets = parseInt(fd.get(`s${k}`), 10); const reps = parseInt(fd.get(`r${k}`), 10); const kv = num(fd.get(`k${k}`) || '');
+        if (!(sets > 0 && reps > 0)) { toast(`Revisá series y reps de la semana ${k + 1}`); return; }
+        it.weeks[k] = { sets, reps, kg: kv };
+      }
+      it.perSide = !!fd.get('perSide'); it.rest = +fd.get('rest');
+      save(); closeModal(); render(); toast('Ejercicio actualizado');
       return;
     }
     if (f.id === 'editItemForm') {
@@ -1119,6 +1316,94 @@
   }
 
   // ------------------------------------------------------------------
+  // Contraseña (bloqueo local)
+  // ------------------------------------------------------------------
+  const LOCK_AFTER_MIN = 5;
+  const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const unb64 = (str) => Uint8Array.from(atob(str), (c) => c.charCodeAt(0));
+
+  async function hashPw(pw, saltB64) {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: unb64(saltB64), iterations: 150000, hash: 'SHA-256' }, key, 256);
+    return b64(bits);
+  }
+  async function checkPw(pw) {
+    if (!S.lock) return true;
+    return (await hashPw(pw, S.lock.salt)) === S.lock.hash;
+  }
+  async function setPw(pw) {
+    const salt = b64(crypto.getRandomValues(new Uint8Array(16)));
+    S.lock = { salt, hash: await hashPw(pw, salt) };
+    save();
+  }
+
+  let locked = false;
+  let fails = 0; let blockedUntil = 0;
+  function showLock() {
+    if (!S.lock) return;
+    locked = true;
+    let el = $('#lock');
+    if (!el) { el = document.createElement('div'); el.id = 'lock'; el.className = 'lock'; document.body.appendChild(el); }
+    el.innerHTML = `
+      <form id="unlockForm" class="lock-card">
+        <div class="logo">${logoSvg()}</div>
+        <h2>Rutina Gim</h2>
+        <p class="muted small">Ingresá tu contraseña</p>
+        <input name="pw" type="password" autocomplete="current-password" aria-label="Contraseña" required/>
+        <p class="lock-err" id="lockErr"></p>
+        <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+        <button class="link small" type="button" data-action="pw-forgot">Olvidé la contraseña</button>
+      </form>`;
+    el.hidden = false;
+    setTimeout(() => { const i = $('#unlockForm input'); i && i.focus(); }, 50);
+  }
+  function hideLock() { locked = false; const el = $('#lock'); if (el) { el.hidden = true; el.innerHTML = ''; } }
+
+  let hiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+    else if (S.lock && !locked && !S.active && hiddenAt && Date.now() - hiddenAt > LOCK_AFTER_MIN * 60000) showLock();
+  });
+
+  document.addEventListener('submit', async (ev) => {
+    const f = ev.target;
+    if (f.id === 'unlockForm') {
+      ev.preventDefault();
+      const err = $('#lockErr');
+      if (Date.now() < blockedUntil) { err.textContent = `Demasiados intentos. Esperá ${Math.ceil((blockedUntil - Date.now()) / 1000)} s.`; return; }
+      const pw = new FormData(f).get('pw');
+      if (await checkPw(pw)) { fails = 0; hideLock(); return; }
+      fails++;
+      if (fails >= 5) { blockedUntil = Date.now() + 30000 * (fails - 4); }
+      err.textContent = fails >= 5 ? 'Contraseña incorrecta. Esperá 30 s para reintentar.' : 'Contraseña incorrecta.';
+      f.reset(); vibrate(200);
+    }
+    if (f.id === 'pwForm') {
+      ev.preventDefault();
+      const fd = new FormData(f);
+      if (S.lock && !(await checkPw(fd.get('cur')))) { toast('La contraseña actual no es correcta'); return; }
+      const pw = fd.get('pw') || '';
+      if (pw.length < 4) { toast('La contraseña debe tener al menos 4 caracteres'); return; }
+      if (pw !== fd.get('pw2')) { toast('Las contraseñas no coinciden'); return; }
+      await setPw(pw); render(); toast('Contraseña guardada 🔒');
+    }
+  }, true);
+
+  document.addEventListener('click', async (ev) => {
+    const el = ev.target.closest('[data-action="pw-remove"], [data-action="pw-forgot"]');
+    if (!el) return;
+    ev.stopPropagation();
+    if (el.dataset.action === 'pw-remove') {
+      const cur = $('#pwForm [name=cur]').value;
+      if (!(await checkPw(cur))) { toast('Escribí tu contraseña actual para quitarla'); return; }
+      S.lock = null; save(); render(); toast('Contraseña desactivada');
+    } else if (confirm('Sin la contraseña no se pueden recuperar los datos. ¿Borrar TODO (perfil, rutina e historial) y empezar de nuevo?')) {
+      try { localStorage.removeItem(KEY); } catch (e) { /* */ }
+      location.reload();
+    }
+  }, true);
+
+  // ------------------------------------------------------------------
   // Inicio
   // ------------------------------------------------------------------
   render();
@@ -1126,6 +1411,7 @@
     // retomar automáticamente un entrenamiento en curso
     openWorkout();
   }
+  if (S.lock) showLock();
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   }

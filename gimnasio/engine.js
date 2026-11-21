@@ -188,7 +188,8 @@
   }
 
   function pickExercise(pattern, role, p, used) {
-    const list = eligible(pattern, p);
+    // Las variantes "extra" (de rutinas de profesores) no se eligen solas.
+    const list = eligible(pattern, p).filter((e) => !e.extra);
     if (!list.length) return null;
     const sorted = list
       .map((e, i) => ({ e, i, s: rank(e, role, p) }))
