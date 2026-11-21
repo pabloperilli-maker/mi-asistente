@@ -9,6 +9,7 @@
   // Estado
   // ------------------------------------------------------------------
   const KEY = 'rutinaGim.v1';
+  const APP_VERSION = '6';
   const DEFAULT_SETTINGS = { sound: true, volume: 0.8, vibrate: true, notify: false, wakeLock: true };
   let S = load();
   let tab = 'hoy';
@@ -1265,6 +1266,13 @@
     </section>
 
     <section class="card">
+      <h3>Cerrar sesión y actualizar</h3>
+      <p class="small muted">Cierra la app, busca la última versión publicada y vuelve a abrir.${S.lock ? ' Te va a pedir la contraseña.' : ''} Tus datos y lo que cambiaste quedan guardados (se guardan al instante).</p>
+      <button class="btn btn-primary btn-block" data-action="logout">Cerrar sesión</button>
+      <p class="small muted center">Versión ${APP_VERSION}</p>
+    </section>
+
+    <section class="card">
       <h3>Reiniciar</h3>
       <button class="btn btn-sm btn-ghost" data-action="restart-cycle">Reiniciar bloque (semana 1)</button>
       <button class="btn btn-sm danger" data-action="reset-all">Borrar todos los datos</button>
@@ -1332,6 +1340,7 @@
         break;
       case 'export': exportData(); break;
       case 'test-sound': audio(); finishSound(); vibrate([200, 100, 200]); break;
+      case 'logout': logout(); break;
       case 'restart-cycle': S.plan.cycleStart = new Date().toISOString(); save(); toast('Bloque reiniciado: semana 1'); render(); break;
       case 'reset-all':
         if (confirm('Se borrarán perfil, rutina e historial de este dispositivo. ¿Continuar?')) {
@@ -1462,6 +1471,21 @@
   }
 
   // ------------------------------------------------------------------
+  // Cerrar sesión: guarda, busca la versión nueva y recarga
+  // ------------------------------------------------------------------
+  async function logout() {
+    if (S.active && !confirm('Tenés un entrenamiento en curso: queda guardado y lo retomás al volver. ¿Cerrar sesión igual?')) return;
+    save();
+    stopTimer();
+    document.body.innerHTML = `<div class="lock"><div class="lock-card"><div class="logo">${logoSvg()}</div><h2>Cerrando sesión…</h2><p class="muted small">Buscando la última versión de la app</p></div></div>`;
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if (reg) await Promise.race([reg.update(), new Promise((r) => setTimeout(r, 4000))]);
+    } catch (e) { /* sin conexión: se recarga con lo que haya */ }
+    location.reload();
+  }
+
+  // ------------------------------------------------------------------
   // Contraseña (bloqueo local)
   // ------------------------------------------------------------------
   const LOCK_AFTER_MIN = 5;
@@ -1561,9 +1585,12 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((reg) => reg.update()).catch(() => {}));
     // Cuando se instala una versión nueva de la app, recargar una vez para usarla.
+    // (no la primera vez que se abre: ahí no hay versión vieja y se perdería lo que se está escribiendo)
     let reloaded = false;
+    const hadController = !!navigator.serviceWorker.controller;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (reloaded || S.active) return;
+      if (reloaded || S.active || !hadController) return;
+      if (document.activeElement && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
       reloaded = true; location.reload();
     });
   }
