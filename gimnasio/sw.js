@@ -1,4 +1,4 @@
-const CACHE = 'rutina-gim-v4';
+const CACHE = 'rutina-gim-v5';
 const IMG_CACHE = 'rutina-gim-img-v1';
 const ASSETS = ['./', './index.html', './style.css', './exercises.js', './engine.js', './app.js', './manifest.json', './icon.svg'];
 

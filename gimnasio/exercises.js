@@ -733,6 +733,95 @@
       yt: 'vuelos posteriores pecho apoyado banco técnica'
     },
 
+    {
+      id: 'sentadilla_press_landmine', extra: true, n: 'Sentadilla y press con landmine', p: 'squat', eq: ['gym'], tool: 'disco',
+      img: 'Landmine_Linear_Jammer', c: true, lvl: 1, r: 0.15, lower: true, avoid: [],
+      m: 'Cuádriceps, glúteos, hombros, tríceps',
+      tips: ['Barra en el landmine, extremo sostenido con ambas manos a la altura del pecho.', 'Sentadilla con torso erguido y rodillas en línea con los pies.', 'Al subir, aprovechá el impulso de las piernas para empujar la barra hacia arriba y adelante hasta extender los brazos.', 'Bajá la barra al pecho controlada antes de la siguiente repetición. "0 kg" = solo la barra.'],
+      errs: ['Arquear la zona lumbar al empujar.', 'Separar la sentadilla del press (perder el impulso).'],
+      yt: 'sentadilla press landmine thruster técnica'
+    },
+    {
+      id: 'vuelos_combinados', extra: true, n: 'Vuelos combinados (laterales + frontales)', p: 'lateral', eq: ['gym', 'db'], tool: 'mancuernas',
+      img: 'Side_Laterals_to_Front_Raise', c: false, lvl: 1, r: 0.06, lower: false, avoid: [],
+      m: 'Deltoides lateral y anterior',
+      tips: ['Una mancuerna en cada mano, codos apenas flexionados.', 'Subí hacia los costados hasta la altura de los hombros, bajá; después subí al frente y bajá (o alterná según indique tu profe).', 'Sin balanceo, bajada lenta.'],
+      errs: ['Encoger los hombros.', 'Subir por encima de los hombros.'],
+      yt: 'elevaciones laterales y frontales combinadas mancuernas'
+    },
+    {
+      id: 'frances_db', extra: true, n: 'Tríceps francés con mancuernas', p: 'triceps', eq: ['gym', 'db'], tool: 'mancuernas',
+      img: 'Lying_Dumbbell_Tricep_Extension', c: false, lvl: 1, r: 0.08, lower: false, avoid: ['hombro'],
+      m: 'Tríceps',
+      tips: ['Acostada en el banco, mancuernas arriba con palmas enfrentadas.', 'Flexioná solo los codos llevando las mancuernas a los costados de la cabeza.', 'Extendé sin mover los hombros.'],
+      errs: ['Abrir los codos.', 'Mover los brazos desde el hombro.'],
+      yt: 'press francés con mancuernas técnica'
+    },
+    {
+      id: 'abductor_polea', extra: true, n: 'Abductor en polea', p: 'abduct', eq: ['gym'], tool: 'polea',
+      img: 'Side_Leg_Raises', c: false, lvl: 1, r: 0.12, lower: true, avoid: [],
+      m: 'Glúteo medio',
+      tips: ['Tobillera en la polea baja, de costado a la máquina (la pierna que trabaja es la más alejada).', 'Llevá la pierna hacia afuera sin inclinar el torso.', 'Volvé lento. Reps por lado.'],
+      errs: ['Inclinar el torso para compensar.', 'Rotar la cadera.'],
+      yt: 'abducción de cadera en polea técnica'
+    },
+    {
+      id: 'dominadas_rack', extra: true, n: 'Dominadas en rack (pies apoyados)', p: 'vPull', eq: ['gym'], tool: 'corporal',
+      img: 'Inverted_Row', c: true, lvl: 1, r: null, lower: false, avoid: [],
+      m: 'Dorsales, bíceps',
+      tips: ['Barra del rack a una altura en la que, colgada, los pies apoyen en el piso o un cajón.', 'Tirá llevando el pecho a la barra; usá las piernas solo lo necesario.', 'Bajá controlada hasta estirar los brazos.'],
+      errs: ['Empujar demasiado con las piernas.', 'Medio recorrido.'],
+      yt: 'dominadas asistidas en rack pies apoyados'
+    },
+    {
+      id: 'pm_1pierna', extra: true, n: 'Peso muerto a una pierna asistido', p: 'hinge', eq: ['gym', 'db'], tool: 'mancuernas',
+      img: 'Kettlebell_One-Legged_Deadlift', c: true, lvl: 1, r: 0.12, lower: true, avoid: [],
+      m: 'Isquiotibiales, glúteos, equilibrio',
+      tips: ['Una mano en un apoyo (rack o pared) para estabilizar; mancuerna en la otra.', 'Peso en una pierna con la rodilla apenas flexionada; la otra se va hacia atrás mientras el torso baja.', 'Espalda neutra y cadera "cuadrada" (sin abrirla).', 'Reps por pierna.'],
+      errs: ['Rotar la cadera.', 'Redondear la espalda.'],
+      yt: 'peso muerto a una pierna asistido técnica'
+    },
+    {
+      id: 'patada_polea', extra: true, n: 'Patada de glúteo en polea', p: 'glute', eq: ['gym'], tool: 'polea',
+      img: 'One-Legged_Cable_Kickback', c: false, lvl: 1, r: 0.12, lower: true, avoid: [],
+      m: 'Glúteo mayor',
+      tips: ['Tobillera en la polea baja, de frente a la máquina, torso levemente inclinado.', 'Llevá la pierna hacia atrás apretando el glúteo, sin arquear la zona lumbar.', 'Volvé lento. Reps por lado.'],
+      errs: ['Arquear la espalda.', 'Usar impulso.'],
+      yt: 'patada de glúteo en polea técnica'
+    },
+    {
+      id: 'biceps_polea', extra: true, n: 'Bíceps en polea', p: 'biceps', eq: ['gym'], tool: 'polea',
+      img: 'Standing_Biceps_Cable_Curl', c: false, lvl: 1, r: 0.25, lower: false, avoid: [],
+      m: 'Bíceps',
+      tips: ['Polea baja con barra corta.', 'Codos pegados al cuerpo y fijos.', 'Subí y bajá controlado.'],
+      errs: ['Balancear el torso.'],
+      yt: 'curl de bíceps en polea técnica'
+    },
+    {
+      id: 'dorsal_1brazo', extra: true, n: 'Dorsal en polea a un brazo', p: 'vPull', eq: ['gym'], tool: 'polea',
+      img: 'One_Arm_Lat_Pulldown', c: true, lvl: 1, r: 0.25, lower: false, avoid: [],
+      m: 'Dorsal ancho',
+      tips: ['Manija simple en la polea alta.', 'Tirá el codo hacia abajo y hacia la cadera.', 'Estirá completo arriba. Reps por lado.'],
+      errs: ['Rotar el torso.', 'Tirar con el bíceps.'],
+      yt: 'jalón a un brazo polea técnica'
+    },
+    {
+      id: 'remo_t', extra: true, n: 'Remo T', p: 'hPull', eq: ['gym'], tool: 'disco',
+      img: 'T-Bar_Row_with_Handle', c: true, lvl: 1, r: 0.3, lower: false, avoid: ['lumbar'],
+      m: 'Espalda media, dorsales',
+      tips: ['Piernas a los lados de la barra, rodillas flexionadas, bisagra de cadera.', 'Espalda neutra y quieta.', 'Tirá la manija hacia el abdomen juntando omóplatos.'],
+      errs: ['Redondear la espalda.', 'Usar impulso del torso.'],
+      yt: 'remo en T técnica correcta'
+    },
+    {
+      id: 'sumo_landmine', extra: true, n: 'Sentadilla sumo con landmine', p: 'squat', eq: ['gym'], tool: 'disco',
+      img: 'Sumo_Deadlift', c: true, lvl: 1, r: 0.25, lower: true, avoid: [],
+      m: 'Glúteos, aductores, cuádriceps',
+      tips: ['Extremo de la barra del landmine entre las piernas, tomado con ambas manos.', 'Pies bien abiertos, puntas hacia afuera.', 'Bajá con el torso erguido y subí apretando glúteos.', 'La imagen es de referencia (peso muerto sumo): mirá el video para la versión landmine.'],
+      errs: ['Rodillas hacia adentro.', 'Redondear la espalda.'],
+      yt: 'sentadilla sumo landmine técnica'
+    },
+
     // ---------------- Cardio ----------------
     {
       id: 'cinta_inclinada', n: 'Caminata en cinta inclinada', p: 'cardio', eq: ['gym'], tool: 'maquina',
@@ -789,6 +878,7 @@
     biceps: 'Bíceps',
     triceps: 'Tríceps',
     abduct: 'Abductores / glúteo medio',
+    glute: 'Glúteo (aislado)',
     front: 'Hombro frontal',
     core: 'Core / abdomen',
     cardio: 'Cardio'
