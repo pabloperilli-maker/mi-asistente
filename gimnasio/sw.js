@@ -1,9 +1,9 @@
-const CACHE = 'rutina-gim-v3';
+const CACHE = 'rutina-gim-v4';
 const IMG_CACHE = 'rutina-gim-img-v1';
 const ASSETS = ['./', './index.html', './style.css', './exercises.js', './engine.js', './app.js', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).catch(() => {}));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))).catch(() => {}));
   self.skipWaiting();
 });
 
@@ -30,11 +30,12 @@ self.addEventListener('fetch', (event) => {
   }
   if (url.origin !== self.location.origin) return;
   // Archivos de la app: red primero, caché si no hay conexión.
+  // cache: 'no-cache' obliga a revalidar con el servidor para recibir siempre la última versión.
   event.respondWith(
-    fetch(req).then((res) => {
+    fetch(req, { cache: 'no-cache' }).then((res) => {
       if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
       return res;
-    }).catch(() => caches.match(req))
+    }).catch(() => caches.match(req, { ignoreSearch: true }))
   );
 });
 
