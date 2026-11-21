@@ -1,0 +1,15 @@
+{
+  "name": "Rutina Gim",
+  "short_name": "Rutina Gim",
+  "description": "Rutina de gimnasio personalizada con progresión de cargas, descanso con aviso sonoro y técnica de cada ejercicio",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f1216",
+  "theme_color": "#111418",
+  "orientation": "portrait",
+  "lang": "es-AR",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
