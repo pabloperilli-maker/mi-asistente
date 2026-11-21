@@ -349,3 +349,15 @@ input[type="range"] { padding: 0; accent-color: var(--accent); }
 .lock-card { width: 100%; max-width: 340px; text-align: center; }
 .lock-card input { width: 100%; padding: 13px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface-2); font-size: 1.1rem; text-align: center; margin-top: 8px; }
 .lock-err { color: var(--danger); min-height: 1.4em; font-size: .9rem; }
+
+/* ---------- Rutinas propias ---------- */
+.wk { padding: 8px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-2); font-weight: 600; font-size: .85rem; }
+.wk.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.wk-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.wk-table th { font-size: .78rem; color: var(--muted); font-weight: 600; text-align: center; padding: 4px; }
+.wk-table td { padding: 3px; text-align: center; }
+.wk-table input { width: 100%; min-width: 0; padding: 9px 4px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-2); text-align: center; font-weight: 600; }
+.check-inline { display: flex; gap: 8px; align-items: center; font-size: .9rem; margin: 8px 0; }
+.check-inline input { width: 20px; height: 20px; accent-color: var(--accent); }
+.search { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); margin: 6px 0; }
+.alt-list li[hidden] { display: none; }

@@ -20,6 +20,7 @@ Se publica junto con el resto del repo en GitHub Pages: `https://<usuario>.githu
 - Series de aproximación, calculadora de discos, cambio de ejercicio por alternativas equivalentes.
 - **Progreso**: 1RM estimado por ejercicio, mejores marcas, peso corporal, historial, exportar/importar datos.
 - **Contraseña opcional** (Perfil → Contraseña): bloquea la app en el dispositivo al abrirla y tras 5 min en segundo plano.
+- **Rutina del profe**: en Rutina → "Usar la rutina de mi profe" se carga la rutina de 3 días y 4 semanas (series, reps y kg por semana), editable, con avance automático de semana.
 - Indicadores: IMC, metabolismo basal, calorías objetivo, proteína, agua y zona 2 de frecuencia cardíaca.
 
 Los datos quedan solo en el dispositivo (`localStorage`). Imágenes: [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (dominio público).

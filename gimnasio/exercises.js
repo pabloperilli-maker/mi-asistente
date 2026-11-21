@@ -638,6 +638,101 @@
       yt: 'plancha lateral técnica'
     },
 
+    // ---------------- Variantes de rutinas de profesor ----------------
+    {
+      id: 'sentadilla_espanola', extra: true, n: 'Sentadilla española', p: 'squat', eq: ['gym'], tool: 'disco',
+      img: 'Bodyweight_Squat', c: true, lvl: 1, r: 0.15, lower: true, avoid: [],
+      m: 'Cuádriceps (con poca carga en la rodilla)',
+      tips: [
+        'Banda o cinta gruesa atada a un soporte fijo y pasada por detrás de las rodillas (a la altura del hueco poplíteo).',
+        'Alejate hasta que la banda quede tensa; pies al ancho de cadera. El peso (disco o mancuerna) va sostenido contra el pecho.',
+        'Bajá llevando las rodillas hacia atrás contra la banda, con las tibias casi verticales y el torso erguido.',
+        'Subí empujando con todo el pie. La imagen es de referencia: buscá el video para ver la colocación de la banda.'
+      ],
+      errs: ['Banda floja (se pierde el efecto).', 'Inclinar el torso hacia adelante.', 'Despegar los talones.'],
+      yt: 'sentadilla española técnica banda'
+    },
+    {
+      id: 'prensa_horizontal', extra: true, n: 'Prensa horizontal', p: 'squat', eq: ['gym'], tool: 'maquina',
+      img: 'Leg_Press', c: true, lvl: 1, r: 1.0, lower: true, avoid: [],
+      m: 'Cuádriceps, glúteos',
+      tips: ['Espalda y cadera apoyadas en el respaldo.', 'Pies al ancho de hombros en el centro de la plataforma.', 'Flexioná hasta ~90° de rodilla sin despegar la cadera.', 'Extendé sin trabar las rodillas.'],
+      errs: ['Despegar la cadera.', 'Bloquear las rodillas.'],
+      yt: 'prensa horizontal sentado técnica'
+    },
+    {
+      id: 'press_maquina_neutra', extra: true, n: 'Press de pecho en máquina (agarre neutro)', p: 'hPush', eq: ['gym'], tool: 'maquina',
+      img: 'Machine_Bench_Press', c: true, lvl: 1, r: 0.6, lower: false, avoid: [],
+      m: 'Pectoral, tríceps',
+      tips: ['Manijas con las palmas enfrentadas, a la altura de la mitad del pecho.', 'Espalda apoyada y omóplatos juntos.', 'Codos cerca del cuerpo (~45°).', 'Volvé controlado sin perder la postura.'],
+      errs: ['Despegar la espalda.', 'Encoger los hombros.'],
+      yt: 'press pecho maquina agarre neutro técnica'
+    },
+    {
+      id: 'triceps_polea_1brazo', extra: true, n: 'Tríceps en polea a un brazo', p: 'triceps', eq: ['gym'], tool: 'polea',
+      img: 'Cable_One_Arm_Tricep_Extension', c: false, lvl: 1, r: 0.12, lower: false, avoid: [],
+      m: 'Tríceps',
+      tips: ['Polea alta con manija simple.', 'Codo pegado al costado y fijo.', 'Extendé completo y volvé a ~90°.', 'Hacé todas las reps con un brazo y cambiá.'],
+      errs: ['Mover el hombro.', 'Inclinar el torso para ayudarse.'],
+      yt: 'extensión de tríceps en polea a una mano técnica'
+    },
+    {
+      id: 'rumano_db_disco', extra: true, n: 'Peso muerto con mancuernas (punta de pies en disco)', p: 'hinge', eq: ['gym', 'db'], tool: 'mancuernas',
+      img: 'Stiff-Legged_Dumbbell_Deadlift', c: true, lvl: 1, r: 0.3, lower: true, avoid: ['lumbar'],
+      m: 'Isquiotibiales, glúteos',
+      tips: ['Puntas de los pies apoyadas sobre un disco y talones en el piso: aumenta el estiramiento de isquios.', 'Rodillas apenas flexionadas, cadera atrás, espalda neutra.', 'Mancuernas rozando las piernas, bajá hasta sentir el estiramiento.', 'Subí apretando glúteos.'],
+      errs: ['Redondear la espalda.', 'Flexionar demasiado las rodillas.'],
+      yt: 'peso muerto rumano mancuernas puntas elevadas'
+    },
+    {
+      id: 'remo_estocada', extra: true, n: 'Remo en estocada (polea, un brazo)', p: 'hPull', eq: ['gym'], tool: 'polea',
+      img: 'Seated_One-arm_Cable_Pulley_Rows', c: true, lvl: 1, r: 0.3, lower: false, avoid: [],
+      m: 'Dorsal, espalda media, core',
+      tips: ['De pie en posición de estocada (pierna opuesta al brazo que tira adelante).', 'Torso estable, sin rotar.', 'Tirá el codo hacia atrás y hacia la cadera.', 'Volvé estirando el brazo sin perder la postura. Reps indicadas por lado.'],
+      errs: ['Rotar el torso.', 'Encoger el hombro.'],
+      yt: 'remo en estocada polea un brazo'
+    },
+    {
+      id: 'biceps_polea_soga', extra: true, n: 'Bíceps en polea con soga', p: 'biceps', eq: ['gym'], tool: 'polea',
+      img: 'Cable_Hammer_Curls_-_Rope_Attachment', c: false, lvl: 1, r: 0.3, lower: false, avoid: [],
+      m: 'Bíceps, braquial',
+      tips: ['Polea baja con soga, agarre neutro.', 'Codos pegados y fijos.', 'Subí hasta contraer y bajá controlado.'],
+      errs: ['Balancear el torso.', 'Adelantar los codos.'],
+      yt: 'curl martillo polea soga técnica'
+    },
+    {
+      id: 'abductor', extra: true, n: 'Abductor en máquina', p: 'abduct', eq: ['gym'], tool: 'maquina',
+      img: 'Thigh_Abductor', c: false, lvl: 1, r: 0.5, lower: true, avoid: [],
+      m: 'Glúteo medio y menor',
+      tips: ['Espalda apoyada (o torso levemente inclinado adelante para más glúteo).', 'Abrí las piernas de forma controlada.', 'Pausa 1 s afuera y volvé lento.'],
+      errs: ['Rebotar con el peso.', 'Rango corto.'],
+      yt: 'abductor maquina técnica glúteo medio'
+    },
+    {
+      id: 'vuelos_frontales_soga', extra: true, n: 'Vuelos frontales en polea con soga', p: 'front', eq: ['gym'], tool: 'polea',
+      img: 'Front_Cable_Raise', c: false, lvl: 1, r: 0.15, lower: false, avoid: [],
+      m: 'Deltoides anterior',
+      tips: ['De espaldas a la polea baja, soga entre las piernas.', 'Brazos casi rectos, subí al frente hasta la altura de los hombros.', 'Bajá controlado, sin balanceo.'],
+      errs: ['Balancear el torso.', 'Subir por encima de la cabeza.'],
+      yt: 'elevación frontal polea soga técnica'
+    },
+    {
+      id: 'serrucho', extra: true, n: 'Serrucho (remo a un brazo, 2 apoyos en banco)', p: 'hPull', eq: ['gym', 'db'], tool: 'mancuernas',
+      img: 'One-Arm_Dumbbell_Row', c: true, lvl: 1, r: 0.3, lower: false, avoid: [],
+      m: 'Dorsal, romboides, bíceps',
+      tips: ['Mano y rodilla del mismo lado sobre el banco, espalda plana.', 'Tirá la mancuerna hacia la cadera ("serruchando").', 'Bajá estirando completo. Reps indicadas por lado.'],
+      errs: ['Rotar el torso.', 'Tirar con el bíceps.'],
+      yt: 'remo serrucho mancuerna técnica'
+    },
+    {
+      id: 'vuelos_posteriores_banco', extra: true, n: 'Vuelos posteriores en T con pecho apoyado', p: 'rear', eq: ['gym', 'db'], tool: 'maquina',
+      img: 'Dumbbell_Lying_Rear_Lateral_Raise', c: false, lvl: 1, r: 0.05, lower: false, avoid: [],
+      m: 'Deltoides posterior, trapecio medio',
+      tips: ['Pecho apoyado en un banco inclinado.', 'Abrí los brazos hacia los costados formando una "T", codos levemente flexionados.', 'Pausa arriba juntando omóplatos y bajá controlado.'],
+      errs: ['Usar impulso.', 'Encoger los hombros.'],
+      yt: 'vuelos posteriores pecho apoyado banco técnica'
+    },
+
     // ---------------- Cardio ----------------
     {
       id: 'cinta_inclinada', n: 'Caminata en cinta inclinada', p: 'cardio', eq: ['gym'], tool: 'maquina',
@@ -693,6 +788,8 @@
     rear: 'Hombro posterior',
     biceps: 'Bíceps',
     triceps: 'Tríceps',
+    abduct: 'Abductores / glúteo medio',
+    front: 'Hombro frontal',
     core: 'Core / abdomen',
     cardio: 'Cardio'
   };
