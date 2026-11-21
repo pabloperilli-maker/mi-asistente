@@ -361,3 +361,6 @@ input[type="range"] { padding: 0; accent-color: var(--accent); }
 .check-inline input { width: 20px; height: 20px; accent-color: var(--accent); }
 .search { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); margin: 6px 0; }
 .alt-list li[hidden] { display: none; }
+
+.note { display: block; font-size: .82rem; color: var(--text); background: var(--accent-soft); border-radius: 8px; padding: 4px 8px; margin: 4px 0; }
+.wk-table td:nth-child(2) input { text-align: left; padding-left: 8px; }

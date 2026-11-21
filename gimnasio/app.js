@@ -301,7 +301,7 @@
     S.profile.plannedDays = plan.daysPerWeek;
     plan.nextIdx = 0;
     if (S.plan && S.plan.custom) {
-      S.autoPlan = plan; // se mantiene la rutina propia; la automática queda guardada
+      S.savedPlans = S.savedPlans || {}; S.savedPlans.auto = plan; delete S.autoPlan; // se mantiene la rutina propia
       S.plan.weekdays = E.spreadDays(p.weekdays, S.plan.days.length);
     } else S.plan = plan;
     if (isNew) {
@@ -330,50 +330,121 @@
   // ------------------------------------------------------------------
   // Rutinas propias (del profe) con valores por semana
   // ------------------------------------------------------------------
-  // weeks: [series, reps, kg] por semana. perSide = reps por lado.
-  const PROFE_PLAN = {
-    name: 'Rutina del profe (3 días, 4 semanas)',
-    days: [
-      { name: 'Día 1', focus: 'Cuádriceps · pecho · tríceps', items: [
-        { exId: 'sentadilla_espanola', role: 'main', weeks: [[4, 8, 12.5], [4, 8, 12.5], [4, 8, 15], [4, 8, 15]] },
-        { exId: 'prensa_horizontal', role: 'main', weeks: [[4, 12, 50], [4, 12, 50], [4, 12, 55], [4, 12, 55]] },
-        { exId: 'press_banca', role: 'main', weeks: [[4, 6, 30], [4, 6, 30], [4, 6, 32.5], [4, 6, 32.5]] },
-        { exId: 'press_maquina_neutra', role: 'main', weeks: [[4, 6, 30], [4, 6, 30], [4, 6, 35], [4, 6, 35]] },
-        { exId: 'triceps_polea_1brazo', role: 'acc', perSide: true, weeks: [[3, 8, 10], [3, 8, 10], [3, 8, 15], [3, 8, 11.25]] }
-      ] },
-      { name: 'Día 2', focus: 'Isquiotibiales · espalda · bíceps', items: [
-        { exId: 'rumano_db_disco', role: 'main', weeks: [[4, 8, 17.5], [4, 8, 17.5], [4, 8, 20], [4, 8, 20]] },
-        { exId: 'curl_femoral', role: 'acc', weeks: [[3, 10, 30], [3, 10, 30], [3, 10, 30], [3, 10, 30]] },
-        { exId: 'jalon', role: 'main', weeks: [[4, 12, 55], [4, 12, 55], [4, 12, 60], [4, 12, 60]] },
-        { exId: 'remo_estocada', role: 'main', perSide: true, weeks: [[4, 8, 35], [4, 8, 35], [4, 8, 40], [4, 8, 40]] },
-        { exId: 'biceps_polea_soga', role: 'acc', weeks: [[3, 10, 25], [3, 10, 25], [3, 10, 30], [3, 10, 30]] }
-      ] },
-      { name: 'Día 3', focus: 'Glúteos · hombros · espalda', items: [
-        { exId: 'hip_thrust', role: 'main', weeks: [[4, 8, 65], [4, 8, 65], [4, 6, 70], [4, 6, 70]] },
-        { exId: 'abductor', role: 'acc', weeks: [[3, 12, 30], [3, 12, 30], [3, 10, 35], [3, 10, 35]] },
-        { exId: 'vuelos_frontales_soga', role: 'acc', weeks: [[3, 10, 15], [3, 10, 15], [3, 10, 20], [3, 10, 20]] },
-        { exId: 'serrucho', role: 'main', perSide: true, weeks: [[3, 8, 15], [3, 8, 15], [3, 8, 17.5], [3, 8, 17.5]] },
-        { exId: 'vuelos_posteriores_banco', role: 'acc', weeks: [[3, 8, 30], [3, 8, 30], [3, 8, 32.5], [3, 8, 32.5]] }
-      ] }
-    ]
-  };
+  // Plantillas: weeks = [esquema, kg] por semana. Esquema estilo planilla: '4x8', '3x8 1x5', '3x6y6' (6 por lado).
+  // kg: '12,5', '0/15' (un valor por grupo del esquema), '' = sin dato en la planilla.
+  const ROUTINES = [
+    {
+      id: 'pablo', name: 'Rutina de Pablo (3 días, 4 semanas)', short: 'Pablo',
+      days: [
+        { name: 'Día 1', focus: 'Cuádriceps · pecho · tríceps', items: [
+          { exId: 'sentadilla_espanola', role: 'main', weeks: [['4x8', '12.5'], ['4x8', '12.5'], ['4x8', '15'], ['4x8', '15']] },
+          { exId: 'prensa_horizontal', role: 'main', weeks: [['4x12', '50'], ['4x12', '50'], ['4x12', '55'], ['4x12', '55']] },
+          { exId: 'press_banca', role: 'main', weeks: [['4x6', '30'], ['4x6', '30'], ['4x6', '32.5'], ['4x6', '32.5']] },
+          { exId: 'press_maquina_neutra', role: 'main', weeks: [['4x6', '30'], ['4x6', '30'], ['4x6', '35'], ['4x6', '35']] },
+          { exId: 'triceps_polea_1brazo', role: 'acc', side: true, weeks: [['3x8', '10'], ['3x8', '10'], ['3x8', '15'], ['3x8', '11.25']] }
+        ] },
+        { name: 'Día 2', focus: 'Isquiotibiales · espalda · bíceps', items: [
+          { exId: 'rumano_db_disco', role: 'main', weeks: [['4x8', '17.5'], ['4x8', '17.5'], ['4x8', '20'], ['4x8', '20']] },
+          { exId: 'curl_femoral', role: 'acc', weeks: [['3x10', '30'], ['3x10', '30'], ['3x10', '30'], ['3x10', '30']] },
+          { exId: 'jalon', role: 'main', weeks: [['4x12', '55'], ['4x12', '55'], ['4x12', '60'], ['4x12', '60']] },
+          { exId: 'remo_estocada', role: 'main', side: true, weeks: [['4x8', '35'], ['4x8', '35'], ['4x8', '40'], ['4x8', '40']] },
+          { exId: 'biceps_polea_soga', role: 'acc', weeks: [['3x10', '25'], ['3x10', '25'], ['3x10', '30'], ['3x10', '30']] }
+        ] },
+        { name: 'Día 3', focus: 'Glúteos · hombros · espalda', items: [
+          { exId: 'hip_thrust', role: 'main', weeks: [['4x8', '65'], ['4x8', '65'], ['4x6', '70'], ['4x6', '70']] },
+          { exId: 'abductor', role: 'acc', weeks: [['3x12', '30'], ['3x12', '30'], ['3x10', '35'], ['3x10', '35']] },
+          { exId: 'vuelos_frontales_soga', role: 'acc', weeks: [['3x10', '15'], ['3x10', '15'], ['3x10', '20'], ['3x10', '20']] },
+          { exId: 'serrucho', role: 'main', side: true, weeks: [['3x8', '15'], ['3x8', '15'], ['3x8', '17.5'], ['3x8', '17.5']] },
+          { exId: 'vuelos_posteriores_banco', role: 'acc', weeks: [['3x8', '30'], ['3x8', '30'], ['3x8', '32.5'], ['3x8', '32.5']] }
+        ] }
+      ]
+    },
+    {
+      id: 'luciana', name: 'Rutina de Luciana (3 días, 5 semanas)', short: 'Luciana',
+      days: [
+        { name: 'Día 1', focus: 'Pierna · pecho · hombros · tríceps', items: [
+          { exId: 'sentadilla_press_landmine', role: 'main', weeks: [['4x8', ''], ['3x8 1x5', '0/15'], ['2x8 2x5', ''], ['1x8 3x5', ''], ['4x5', '']] },
+          { exId: 'prensa', role: 'main', note: 'Pirámide: cada serie con más peso y menos repeticiones.', weeks: [['1x10 1x8 1x6', '80/90/100'], ['1x10 1x8 1x6', '80/90/100'], ['1x10 1x8 1x6', ''], ['1x10 1x8 1x6', ''], ['1x10 1x8 1x6', '']] },
+          { exId: 'press_banca', role: 'main', weeks: [['4x5', '5'], ['3x5 1x3', '5/7.5'], ['2x5 2x3', ''], ['1x5 3x3', ''], ['1x5 4x3', '']] },
+          { exId: 'vuelos_combinados', role: 'acc', weeks: [['3x8', '6'], ['3x8', '6'], ['3x8', '6'], ['3x8', ''], ['3x8', '']] },
+          { exId: 'frances_db', role: 'acc', weeks: [['3x10', '5'], ['3x10', '5'], ['3x10', '5'], ['3x10', ''], ['3x10', '']] },
+          { exId: 'abductor_polea', role: 'acc', side: true, weeks: [['3x10', '10'], ['3x10', '10'], ['3x10', '10'], ['3x10', ''], ['3x10', '']] }
+        ] },
+        { name: 'Día 2', focus: 'Isquiotibiales · espalda · glúteos · bíceps', items: [
+          { exId: 'rumano', role: 'main', weeks: [['4x6', '15'], ['3x6 1x5', '15'], ['2x6 2x5', '15/20'], ['1x6 3x5', ''], ['4x5', '']] },
+          { exId: 'dominadas_rack', role: 'main', weeks: [['4x8', ''], ['4x8', ''], ['4x8', ''], ['4x8', ''], ['4x8', '']] },
+          { exId: 'remo_barra', role: 'main', weeks: [['3x8', '20'], ['3x8', '20'], ['3x8', '25'], ['3x8', ''], ['3x8', '']] },
+          { exId: 'pm_1pierna', role: 'main', weeks: [['3x6y6', '10'], ['3x6y6', '10'], ['3x6y6', '10'], ['3x6y6', ''], ['3x6y6', '']] },
+          { exId: 'patada_polea', role: 'acc', side: true, weeks: [['3x10', '15'], ['3x10', '15'], ['3x10', '20'], ['3x10', ''], ['3x10', '']] },
+          { exId: 'biceps_polea', role: 'acc', weeks: [['3x12', '15'], ['3x12', '15'], ['3x12', '20'], ['3x12', ''], ['3x12', '']] }
+        ] },
+        { name: 'Día 3', focus: 'Sentadilla con tempo · espalda · glúteos · hombros', items: [
+          { exId: 'sentadilla', role: 'main', note: 'Tempo 4-2-1: 4 s bajando, 2 s de pausa abajo y 1 s subiendo.', weeks: [['4x5', ''], ['3x5 1x4', ''], ['2x5 2x4', '7.5'], ['1x5 3x4', ''], ['1x5 4x4', '']] },
+          { exId: 'dorsal_1brazo', role: 'main', weeks: [['4x6y6', '20'], ['4x6y6', '20'], ['4x6y6', '20'], ['4x6y6', ''], ['4x6y6', '']] },
+          { exId: 'hip_thrust', role: 'main', note: 'Con banda elástica en las rodillas, empujándolas hacia afuera todo el tiempo.', weeks: [['3x12', '60'], ['3x12', '60'], ['3x12', '60'], ['3x12', ''], ['3x12', '']] },
+          { exId: 'remo_t', role: 'main', weeks: [['3x8', '10'], ['3x8', '10'], ['3x8', '10'], ['3x8', ''], ['3x8', '']] },
+          { exId: 'face_pull', role: 'acc', note: 'Pausa de 2 segundos atrás en cada repetición.', weeks: [['3x8', '20'], ['3x8', '20'], ['3x8', '20'], ['3x8', ''], ['3x8', '']] },
+          { exId: 'sumo_landmine', role: 'main', weeks: [['3x10', '20'], ['3x10', '20'], ['3x10', '20'], ['3x10', ''], ['3x10', '']] }
+        ] }
+      ]
+    }
+  ];
+
+  // '3x8 1x5' -> { groups: [{n:3,reps:8},{n:1,reps:5}], side }
+  function parseScheme(str) {
+    const parts = String(str || '').toLowerCase().replace(/[,+]/g, ' ').split(/\s+/).filter(Boolean);
+    const groups = []; let side = false;
+    for (const p of parts) {
+      const m = p.match(/^(\d+)[x×*](\d+)(?:y(\d+))?$/);
+      if (!m || +m[1] < 1 || +m[2] < 1) return null;
+      if (m[3]) side = true;
+      groups.push({ n: +m[1], reps: +m[2] });
+    }
+    return groups.length ? { groups, side } : null;
+  }
+  // '80/90/100' -> [80,90,100] (un valor por grupo). '' o '-' = sin dato.
+  function parseKg(str, n) {
+    const t = String(str == null ? '' : str).trim();
+    if (!t) return Array(n).fill(null);
+    const vals = t.split('/').map((v) => (v.trim() === '' || v.trim() === '-' ? null : num(v.trim())));
+    if (vals.some((v, i) => v == null && t.split('/')[i].trim() !== '' && t.split('/')[i].trim() !== '-')) return undefined;
+    if (vals.length === 1) return Array(n).fill(vals[0]);
+    return [...Array(n)].map((_, i) => (i < vals.length ? vals[i] : vals[vals.length - 1]));
+  }
+  function weekFrom(scheme, kgStr) {
+    const p = parseScheme(scheme); if (!p) return null;
+    const ks = parseKg(kgStr, p.groups.length); if (!ks) return null;
+    return { groups: p.groups.map((g, j) => ({ ...g, kg: ks[j] })), side: p.side };
+  }
+  // Compatibilidad con el formato anterior { sets, reps, kg }.
+  const weekGroups = (w) => (w.groups ? w.groups : [{ n: w.sets, reps: w.reps, kg: w.kg }]);
+  const schemeTxt = (gs) => gs.map((g) => `${g.n}x${g.reps}`).join(' ');
+  function kgTxt(gs) {
+    if (gs.every((g) => g.kg == null)) return '';
+    if (gs.every((g) => g.kg === gs[0].kg)) return fmtN(gs[0].kg);
+    return gs.map((g) => (g.kg == null ? '-' : fmtN(g.kg))).join('/');
+  }
 
   function buildCustomPlan(tpl) {
     const p = S.profile;
     const days = tpl.days.map((d) => ({
       name: d.name, focus: d.focus,
-      items: d.items.map((it) => ({
-        exId: it.exId, role: it.role, perSide: !!it.perSide,
-        rest: it.role === 'main' ? 120 : 75, rir: 2,
-        weeks: it.weeks.map(([sets, reps, kgv]) => ({ sets, reps, kg: kgv }))
-      }))
+      items: d.items.map((it) => {
+        const weeks = it.weeks.map(([sch, k]) => weekFrom(sch, k));
+        return {
+          exId: it.exId, role: it.role, note: it.note || '',
+          perSide: !!it.side || weeks.some((w) => w.side),
+          rest: it.role === 'main' ? 120 : 75, rir: 2,
+          weeks: weeks.map((w) => ({ groups: w.groups }))
+        };
+      })
     }));
     const nWeeks = Math.max(...days.flatMap((d) => d.items.map((i) => i.weeks.length)));
     return {
-      custom: true, id: uid(), createdAt: new Date().toISOString(),
+      custom: true, tplId: tpl.id, id: uid(), createdAt: new Date().toISOString(),
       split: tpl.name, weekdays: E.spreadDays(p.weekdays && p.weekdays.length ? p.weekdays : [1, 3, 5], days.length),
       daysPerWeek: days.length, nWeeks, week: 1, nextIdx: 0,
-      recDays: { why: 'Rutina cargada a partir de la planilla de tu profesor/a.' },
+      recDays: { why: 'Rutina cargada a partir de la planilla del profesor/a.' },
       days
     };
   }
@@ -385,23 +456,93 @@
   function resolve(it) {
     if (!it.weeks) return it;
     const w = it.weeks[Math.min(curWeek(), it.weeks.length) - 1] || it.weeks[it.weeks.length - 1];
-    return { ...it, sets: w.sets, lo: w.reps, hi: w.reps, kgWeek: w.kg };
+    const gs = weekGroups(w);
+    const reps = gs.map((g) => g.reps);
+    return { ...it, groups: gs, sets: gs.reduce((a, g) => a + g.n, 0), lo: Math.min(...reps), hi: Math.max(...reps), kgWeek: gs[0].kg };
   }
   const rng = (it) => (it.lo === it.hi ? `${it.lo}` : `${it.lo}–${it.hi}`);
   const sideTxt = (it) => (it.perSide ? ' por lado' : '');
+  // Texto corto del esquema de la semana: "3×8 + 1×5 · 0/15 kg"
+  function schemeLabel(it) {
+    if (!it.groups) return `${it.sets} × ${rng(it)}`;
+    const gs = it.groups;
+    const sch = gs.length > 1 ? gs.map((g) => `${g.n}×${g.reps}`).join(' + ') : `${gs[0].n} × ${gs[0].reps}`;
+    const k = kgTxt(gs);
+    return `${sch}${sideTxt(it)}${k ? ` · ${k} kg` : ''}`;
+  }
 
   function cyc() {
     if (S.plan.custom) return { isDeload: false, week: curWeek(), every: S.plan.nWeeks };
     return E.cycleInfo(S.plan, S.profile);
   }
 
+  function lastWeight(exId) {
+    const h = E.historyFor(exId, S.logs)[0];
+    if (!h) return null;
+    const ws = h.sets.map((x) => x.w).filter((x) => x != null);
+    return ws.length ? Math.max(...ws) : null;
+  }
+
   function customRec(r) {
-    if (!pastPlan() && r.kgWeek != null) {
-      return { kind: 'start', w: r.kgWeek, perHand: BY_ID[r.exId].tool === 'mancuernas', msg: `Semana ${curWeek()} de tu rutina: ${r.sets} × ${r.lo}${sideTxt(r)}${r.kgWeek != null ? ` con ${kg(r.kgWeek)}` : ''}. Si te sobra mucho, avisale a tu profe.` };
+    const ex = BY_ID[r.exId];
+    const perHand = ex.tool === 'mancuernas';
+    if (pastPlan()) {
+      const rec = E.recommend(r, S.logs, S.profile, false);
+      rec.msg = `Terminaste las ${S.plan.nWeeks} semanas. ${rec.msg} Pedile a tu profe la próxima etapa.`;
+      return rec;
     }
-    const rec = E.recommend(r, S.logs, S.profile, false);
-    if (pastPlan()) rec.msg = `Terminaste las ${S.plan.nWeeks} semanas. ${rec.msg} Pedile a tu profe la próxima etapa.`;
-    return rec;
+    const gs = r.groups || [];
+    const plan = gs.map((g) => `${g.n}×${g.reps}${g.kg != null ? ` con ${kg(g.kg)}` : ''}`).join(' + ');
+    if (ex.r == null) return { kind: 'start', w: null, msg: `Semana ${curWeek()}: ${plan}${sideTxt(r)} con tu peso corporal.` };
+    if (gs.every((g) => g.kg != null)) {
+      return { kind: 'start', w: gs[0].kg, perHand, msg: `Semana ${curWeek()} de tu rutina: ${plan}${sideTxt(r)}.` };
+    }
+    // La planilla no tiene kilos para esta semana: usar lo último registrado o una estimación.
+    const lw = lastWeight(r.exId);
+    // último kilo que figura en la planilla en semanas anteriores
+    let pk = null;
+    for (let k = Math.min(curWeek(), r.weeks.length) - 2; k >= 0 && pk == null; k--) {
+      const ks = weekGroups(r.weeks[k]).map((g) => g.kg).filter((x) => x != null);
+      if (ks.length) pk = Math.max(...ks);
+    }
+    const fb = lw != null ? lw : pk != null ? pk : E.recommend(r, S.logs, S.profile, false).w;
+    gs.forEach((g) => { if (g.kg == null) g.fallback = fb; });
+    const why = lw != null ? `te propongo lo último que usaste (${kg(lw)})` : pk != null ? `te propongo el último peso de la planilla (${kg(pk)})` : 'te propongo una estimación prudente';
+    return {
+      kind: 'keep', w: fb, perHand,
+      msg: `Semana ${curWeek()}: ${plan}${sideTxt(r)}. La planilla no tiene kilos para esta semana: ${why}. Consultalo con tu profe.`
+    };
+  }
+
+  function routineModal() {
+    const cur = S.plan.custom ? (S.plan.tplId || 'pablo') : 'auto';
+    openModal(`<h3>Elegí la rutina</h3>
+      <p class="small muted">Cada celular guarda su propia rutina e historial.</p>
+      <ul class="alt-list">
+        <li><button data-action="pick-routine" data-id="auto"><span><b>Rutina automática ${cur === 'auto' ? '✓' : ''}</b><small>Armada por la app según tu perfil, con progresión automática</small></span></button></li>
+        ${ROUTINES.map((r) => `<li><button data-action="pick-routine" data-id="${r.id}"><span><b>${esc(r.name)} ${cur === r.id ? '✓' : ''}</b><small>${r.days.map((d) => esc(d.focus)).join(' / ')}</small></span></button></li>`).join('')}
+      </ul>`);
+  }
+
+  function pickRoutine(id) {
+    const cur = S.plan.custom ? (S.plan.tplId || 'pablo') : 'auto';
+    if (id === cur) { closeModal(); return; }
+    if (S.active) { toast('Terminá o descartá el entrenamiento en curso primero'); return; }
+    S.savedPlans = S.savedPlans || {};
+    if (S.customPlan) { S.savedPlans.pablo = S.savedPlans.pablo || S.customPlan; delete S.customPlan; }
+    if (S.autoPlan && !S.savedPlans.auto) { S.savedPlans.auto = S.autoPlan; }
+    delete S.autoPlan;
+    S.savedPlans[cur] = S.plan; // guardar la actual (con su semana y cambios)
+    if (id === 'auto') {
+      S.plan = S.savedPlans.auto || E.buildPlan(S.profile);
+      if (S.plan.nextIdx == null) S.plan.nextIdx = 0;
+    } else {
+      S.plan = S.savedPlans[id] || buildCustomPlan(ROUTINES.find((r) => r.id === id));
+      if (!S.plan.tplId) S.plan.tplId = id;
+    }
+    delete S.savedPlans[id];
+    save(); closeModal(); tab = 'rutina'; render();
+    toast(id === 'auto' ? 'Rutina automática' : `${ROUTINES.find((r) => r.id === id).short}: rutina cargada`);
   }
 
   // ------------------------------------------------------------------
@@ -478,7 +619,7 @@
       <h2>${esc(day.name)}</h2>
       <p class="muted">${esc(day.focus)} · ~${E.dayMinutes({ items })} min</p>
       <ul class="ex-mini">
-        ${items.map((it) => { const ex = BY_ID[it.exId]; return `<li><img src="${img(ex)}" alt="" loading="lazy"/><span>${esc(ex.n)}</span><em>${it.cardio ? `${it.lo} min` : `${it.sets}×${rng(it)}${ex.time ? ' s' : ''}${it.kgWeek != null ? ` · ${fmtN(it.kgWeek)} kg` : ''}`}</em></li>`; }).join('')}
+        ${items.map((it) => { const ex = BY_ID[it.exId]; return `<li><img src="${img(ex)}" alt="" loading="lazy"/><span>${esc(ex.n)}</span><em>${it.cardio ? `${it.lo} min` : it.groups ? schemeLabel(it) : `${it.sets}×${rng(it)}${ex.time ? ' s' : ''}`}</em></li>`; }).join('')}
       </ul>
       <button class="btn btn-primary btn-block big" data-action="start" data-day="${idx}">${S.active ? 'Continuar entrenamiento' : 'Empezar entrenamiento'}</button>
       <button class="btn btn-ghost btn-block" data-action="pick-day">Elegir otro día de la rutina</button>
@@ -516,9 +657,7 @@
       <p class="muted small">${esc(rd.why)}</p>
       ${plan.custom ? `<p class="small">Mostrando la <b>semana ${Math.min(plan.week || 1, plan.nWeeks)}</b> de ${plan.nWeeks}. Tocá ✎ para ver o cambiar series, reps y kilos de cada semana.</p>` : `<p class="muted small">Objetivo: ${E.GOALS[p.goal]} · ${E.EQUIP[p.equipment]} · ${p.sessionMin} min por sesión</p>`}
       <div class="row gap wrap">
-        ${plan.custom
-          ? `<button class="btn btn-sm btn-ghost" data-action="use-auto">Volver a la rutina automática</button>`
-          : `<button class="btn btn-sm" data-action="load-profe">Usar la rutina de mi profe</button>`}
+        <button class="btn btn-sm" data-action="routines">Cambiar de rutina (automática / del profe)</button>
       </div>
     </section>
 
@@ -560,13 +699,14 @@
     const it = resolve(it0);
     const ex = BY_ID[it.exId];
     const label = it.cardio ? `${it.lo} min` : it0.weeks
-      ? `${it.sets} × ${rng(it)}${sideTxt(it)}${it.kgWeek != null ? ` · ${fmtN(it.kgWeek)} kg${ex.tool === 'mancuernas' ? ' c/u' : ''}` : ''} · desc. ${restTxt(it.rest)}`
+      ? `${schemeLabel(it)}${ex.tool === 'mancuernas' && it.kgWeek != null ? ' c/u' : ''} · desc. ${restTxt(it.rest)}`
       : `${it.sets} × ${rng(it)} ${ex.time ? 's' : 'reps'} · RIR ${it.rir} · desc. ${restTxt(it.rest)}`;
     return `<li class="plan-row">
       <button class="thumb" data-action="tech" data-ex="${ex.id}" aria-label="Ver técnica"><img src="${img(ex)}" alt="" loading="lazy"/></button>
       <div class="plan-info" data-action="tech" data-ex="${ex.id}">
         <b>${esc(ex.n)}</b>
         <small>${label}</small>
+        ${it0.note ? `<small class="note">📝 ${esc(it0.note)}</small>` : ''}
         <small class="muted">${esc(ex.m)}</small>
       </div>
       <div class="plan-actions">
@@ -592,12 +732,13 @@
       openModal(`
         <h3>${esc(ex.n)}</h3>
         <form id="editWeeksForm" data-d="${di}" data-i="${ii}" class="form">
-          <table class="wk-table"><thead><tr><th>Sem</th><th>Series</th><th>Reps</th><th>Kg${ex.tool === 'mancuernas' ? ' c/u' : ''}</th></tr></thead><tbody>
-          ${it.weeks.map((w, k) => `<tr><td>${k + 1}</td>
-            <td><input name="s${k}" inputmode="numeric" value="${w.sets}"/></td>
-            <td><input name="r${k}" inputmode="numeric" value="${w.reps}"/></td>
-            <td><input name="k${k}" inputmode="decimal" value="${w.kg != null ? fmtN(w.kg) : ''}"/></td></tr>`).join('')}
+          <p class="small muted">Escribilo como en la planilla: <b>4x8</b>, <b>3x8 1x5</b>, <b>1x10 1x8 1x6</b> o <b>3x6y6</b> (por lado). Kilos: un valor, o uno por grupo separados por barra (<b>0/15</b>, <b>80/90/100</b>). Vacío = sin dato.</p>
+          <table class="wk-table"><thead><tr><th>Sem</th><th>Series x reps</th><th>Kg${ex.tool === 'mancuernas' ? ' c/u' : ''}</th></tr></thead><tbody>
+          ${it.weeks.map((w, k) => { const gs = weekGroups(w); return `<tr><td>${k + 1}</td>
+            <td><input name="s${k}" value="${esc(schemeTxt(gs))}" autocapitalize="off"/></td>
+            <td><input name="k${k}" inputmode="decimal" value="${esc(kgTxt(gs))}"/></td></tr>`; }).join('')}
           </tbody></table>
+          <label class="field"><span>Nota (opcional)</span><input name="note" value="${esc(it.note || '')}" placeholder="Ej.: tempo 4-2-1, pausa 2 s, con banda"/></label>
           <label class="check-inline"><input type="checkbox" name="perSide" ${it.perSide ? 'checked' : ''}/> Repeticiones por lado (ejercicio a un brazo/pierna)</label>
           <label class="field"><span>Descanso entre series</span>
             <select name="rest">${[30, 45, 60, 75, 90, 120, 150, 180, 240].map((x) => `<option value="${x}" ${it.rest === x ? 'selected' : ''}>${restTxt(x)}</option>`).join('')}</select>
@@ -721,7 +862,16 @@
   function buildRows(it) {
     const ex = BY_ID[it.exId];
     if (it.cardio) return [{ w: null, reps: it.lo, done: false }];
-    return [...Array(it.sets)].map(() => ({ w: it.rec && it.rec.w != null ? it.rec.w : null, reps: null, done: false }));
+    if (it.groups) {
+      const rows = [];
+      it.groups.forEach((g) => {
+        const w = ex.r == null ? null : (g.kg != null ? g.kg : (g.fallback != null ? g.fallback : null));
+        for (let k = 0; k < g.n; k++) rows.push({ w, pw: w, t: g.reps, reps: null, done: false });
+      });
+      return rows;
+    }
+    const w0 = it.rec && it.rec.w != null ? it.rec.w : null;
+    return [...Array(it.sets)].map(() => ({ w: w0, pw: w0, reps: null, done: false }));
   }
 
   function startWorkout(dayIdx) {
@@ -808,7 +958,7 @@
         <div class="set-row ${r.done ? 'done' : ''}">
           <span class="set-n">${s + 1}</span>
           ${ex.r != null ? `<label class="set-in"><input data-field="w" data-i="${i}" data-s="${s}" inputmode="decimal" value="${r.w != null ? fmtN(r.w) : ''}" placeholder="kg"/><small>${wLabel}</small></label>` : '<span class="set-bw">corporal</span>'}
-          <label class="set-in"><input data-field="reps" data-i="${i}" data-s="${s}" inputmode="numeric" value="${r.reps ?? ''}" placeholder="${rng(it)}"/><small>${unit}</small></label>
+          <label class="set-in"><input data-field="reps" data-i="${i}" data-s="${s}" inputmode="numeric" value="${r.reps ?? ''}" placeholder="${r.t != null ? r.t : rng(it)}"/><small>${unit}</small></label>
           ${ex.time && !r.done ? `<button class="icon-btn" data-action="time-set" data-i="${i}" data-s="${s}" aria-label="Cronometrar">⏱</button>` : ''}
           <button class="check" data-action="set-done" data-i="${i}" data-s="${s}" aria-label="${r.done ? 'Desmarcar' : 'Completar'} serie">✓</button>
         </div>`).join('');
@@ -820,10 +970,11 @@
         <button class="thumb" data-action="tech" data-ex="${ex.id}" aria-label="Ver técnica"><img src="${img(ex)}" alt="" loading="lazy"/><span>Técnica</span></button>
         <div>
           <b>${esc(ex.n)}</b>
-          <small>${it.cardio ? `${it.lo} min` : `${it.sets} × ${rng(it)} ${unit}${sideTxt(it)}${it.weeks ? '' : ` · RIR ${it.rir}`} · descanso ${restTxt(it.rest)}`}</small>
+          <small>${it.cardio ? `${it.lo} min` : it.groups ? `${schemeLabel(it)} · descanso ${restTxt(it.rest)}` : `${it.sets} × ${rng(it)} ${unit} · RIR ${it.rir} · descanso ${restTxt(it.rest)}`}</small>
         </div>
         <button class="icon-btn" data-action="swap-w" data-w="${i}" aria-label="Cambiar ejercicio">⇄</button>
       </div>
+      ${it.note ? `<p class="note">📝 ${esc(it.note)}</p>` : ''}
       ${rec.msg ? `<div class="rec ${kindCls}">${rec.w != null ? `<b>${kg(rec.w)}${rec.perHand ? ' por mancuerna' : ''}</b> · ` : ''}${esc(rec.msg)}</div>` : ''}
       ${last && !it.cardio ? `<p class="small muted">Última vez (${dateShort(last.date)}): ${last.sets.map((s) => (s.w ? `${fmtN(s.w)}×${s.reps}` : `${s.reps}`)).join(' · ')}${last.rir != null ? ` · RIR ${last.rir}` : ''}</p>` : ''}
       ${warm.length ? `<p class="small warm">Aproximación: ${warm.map((w) => `${fmtN(w.w)} kg × ${w.reps}`).join(' → ')}</p>` : ''}
@@ -843,7 +994,7 @@
       const it = a.items[i]; const s = it.rows.findIndex((r) => !r.done);
       if (s >= 0) {
         const ex = BY_ID[it.exId]; const r = it.rows[s];
-        return `Siguiente: <b>${esc(ex.n)}</b> — serie ${s + 1}/${it.rows.length}${r.w != null ? ` · ${kg(r.w)}` : ''} × ${it.cardio ? `${it.lo} min` : rng(it) + sideTxt(it)}`;
+        return `Siguiente: <b>${esc(ex.n)}</b> — serie ${s + 1}/${it.rows.length}${r.w != null ? ` · ${kg(r.w)}` : ''} × ${it.cardio ? `${it.lo} min` : (r.t != null ? r.t : rng(it)) + sideTxt(it)}`;
       }
     }
     return 'Era la última serie. ¡Terminá el entrenamiento!';
@@ -852,11 +1003,12 @@
   function setDone(i, s, fromTimer = false) {
     const a = S.active; const it = a.items[i]; const r = it.rows[s]; const ex = BY_ID[it.exId];
     if (r.done && !fromTimer) { r.done = false; save(); renderWorkout(); return; }
-    if (r.reps == null || r.reps === '') r.reps = ex.time ? it.lo : it.cardio ? it.lo : it.lo;
+    if (r.reps == null || r.reps === '') r.reps = r.t != null ? r.t : it.lo;
     if (ex.r != null && (r.w == null)) { toast('Cargá el peso usado'); return; }
     r.done = true;
     // Propagar el peso a las series siguientes que no estén hechas
-    for (let k = s + 1; k < it.rows.length; k++) if (!it.rows[k].done) it.rows[k].w = r.w;
+    // (solo a las que tenían planificado el mismo peso: en pirámides cada grupo conserva el suyo)
+    for (let k = s + 1; k < it.rows.length; k++) if (!it.rows[k].done && it.rows[k].pw === r.pw) it.rows[k].w = r.w;
     save();
     vibrate(40);
     const remaining = a.items.some((x) => x.rows.some((y) => !y.done));
@@ -1132,21 +1284,13 @@
     const d = el.dataset;
     switch (act) {
       case 'modal-close': closeModal(); break;
-      case 'load-profe':
-        if (S.active) { toast('Terminá o descartá el entrenamiento en curso primero'); break; }
-        if (!confirm('Se cargará la rutina de tu profe (3 días, 4 semanas) con sus series, repeticiones y kilos. Tu rutina automática queda guardada para volver cuando quieras. ¿Continuar?')) break;
-        S.autoPlan = S.plan; S.plan = S.customPlan || buildCustomPlan(PROFE_PLAN); S.customPlan = null; save(); render(); toast('Rutina del profe cargada');
-        break;
-      case 'use-auto':
-        if (S.active) { toast('Terminá o descartá el entrenamiento en curso primero'); break; }
-        if (!confirm('¿Volver a la rutina automática? La rutina de tu profe queda guardada (con tus cambios) para volver a cargarla.')) break;
-        S.customPlan = S.plan; S.plan = S.autoPlan || E.buildPlan(S.profile); if (S.plan.nextIdx == null) S.plan.nextIdx = 0; save(); render();
-        break;
+      case 'routines': routineModal(); break;
+      case 'pick-routine': pickRoutine(d.id); break;
       case 'set-week': S.plan.week = +d.w; S.plan.nextIdx = 0; save(); render(); toast(+d.w > S.plan.nWeeks ? 'Progresión automática' : `Semana ${d.w}`); break;
       case 'add-ex': addExModal(+d.d); break;
       case 'do-add': {
         const day = S.plan.days[+d.d]; const ex = BY_ID[d.to];
-        day.items.push({ exId: ex.id, role: ex.c ? 'main' : 'acc', perSide: false, rest: ex.c ? 120 : 75, rir: 2, weeks: [...Array(S.plan.nWeeks)].map(() => ({ sets: 3, reps: 10, kg: null })) });
+        day.items.push({ exId: ex.id, role: ex.c ? 'main' : 'acc', perSide: false, rest: ex.c ? 120 : 75, rir: 2, note: '', weeks: [...Array(S.plan.nWeeks)].map(() => ({ groups: [{ n: 3, reps: 10, kg: null }] })) });
         save(); closeModal(); render(); editItemModal(+d.d, day.items.length - 1);
         break;
       }
@@ -1173,7 +1317,7 @@
         break;
       case 'set-done': setDone(+d.i, +d.s); break;
       case 'time-set': timeSet(+d.i, +d.s); break;
-      case 'add-set': { const it = S.active.items[+d.i]; const lastRow = it.rows[it.rows.length - 1]; it.rows.push({ w: lastRow ? lastRow.w : null, reps: null, done: false }); save(); renderWorkout(); break; }
+      case 'add-set': { const it = S.active.items[+d.i]; const lastRow = it.rows[it.rows.length - 1]; it.rows.push({ w: lastRow ? lastRow.w : null, pw: lastRow ? lastRow.pw : null, t: lastRow ? lastRow.t : undefined, reps: null, done: false }); save(); renderWorkout(); break; }
       case 'del-set': { const it = S.active.items[+d.i]; const idx = it.rows.map((r) => r.done).lastIndexOf(false); if (idx >= 0 && it.rows.length > 1) it.rows.splice(idx, 1); save(); renderWorkout(); break; }
       case 'rir': S.active.items[+d.i].rirLast = +d.v; save(); renderWorkout(); break;
       case 'plates': {
@@ -1254,12 +1398,14 @@
     if (f.id === 'editWeeksForm') {
       const it = S.plan.days[+f.dataset.d].items[+f.dataset.i];
       const fd = new FormData(f);
+      let anySide = false;
       for (let k = 0; k < it.weeks.length; k++) {
-        const sets = parseInt(fd.get(`s${k}`), 10); const reps = parseInt(fd.get(`r${k}`), 10); const kv = num(fd.get(`k${k}`) || '');
-        if (!(sets > 0 && reps > 0)) { toast(`Revisá series y reps de la semana ${k + 1}`); return; }
-        it.weeks[k] = { sets, reps, kg: kv };
+        const wk = weekFrom(fd.get(`s${k}`), fd.get(`k${k}`));
+        if (!wk) { toast(`Revisá la semana ${k + 1}: series como 4x8 o 3x8 1x5; kilos como 20 o 0/15`); return; }
+        it.weeks[k] = { groups: wk.groups };
+        if (wk.side) anySide = true;
       }
-      it.perSide = !!fd.get('perSide'); it.rest = +fd.get('rest');
+      it.perSide = !!fd.get('perSide') || anySide; it.rest = +fd.get('rest'); it.note = (fd.get('note') || '').trim();
       save(); closeModal(); render(); toast('Ejercicio actualizado');
       return;
     }
