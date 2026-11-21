@@ -19,6 +19,7 @@ Se publica junto con el resto del repo en GitHub Pages: `https://<usuario>.githu
   YouTube y posibilidad de guardar un video elegido para verlo incrustado.
 - Series de aproximación, calculadora de discos, cambio de ejercicio por alternativas equivalentes.
 - **Progreso**: 1RM estimado por ejercicio, mejores marcas, peso corporal, historial, exportar/importar datos.
+- **Contraseña opcional** (Perfil → Contraseña): bloquea la app en el dispositivo al abrirla y tras 5 min en segundo plano.
 - Indicadores: IMC, metabolismo basal, calorías objetivo, proteína, agua y zona 2 de frecuencia cardíaca.
 
 Los datos quedan solo en el dispositivo (`localStorage`). Imágenes: [Free Exercise DB](https://github.com/yuhonas/free-exercise-db) (dominio público).

@@ -954,6 +954,21 @@
     <section class="card"><h3>Editar datos y objetivos</h3>${profileForm(p, false)}</section>
 
     <section class="card">
+      <h3>Contraseña</h3>
+      ${S.lock ? `<p class="small">🔒 La app pide contraseña al abrirse y después de ${LOCK_AFTER_MIN} minutos en segundo plano.</p>` : '<p class="small muted">Protegé tus datos con una contraseña o PIN: se pide cada vez que abrís la app.</p>'}
+      <form id="pwForm" class="form">
+        ${S.lock ? '<label class="field"><span>Contraseña actual</span><input name="cur" type="password" autocomplete="current-password" required/></label>' : ''}
+        <label class="field"><span>${S.lock ? 'Nueva contraseña' : 'Contraseña o PIN'} (mín. 4 caracteres)</span><input name="pw" type="password" autocomplete="new-password" minlength="4" ${S.lock ? '' : 'required'}/></label>
+        <label class="field"><span>Repetila</span><input name="pw2" type="password" autocomplete="new-password"/></label>
+        <div class="row gap wrap">
+          <button class="btn btn-sm btn-primary" type="submit">${S.lock ? 'Cambiar contraseña' : 'Activar contraseña'}</button>
+          ${S.lock ? '<button class="btn btn-sm danger" type="button" data-action="pw-remove">Quitar contraseña</button>' : ''}
+        </div>
+      </form>
+      <p class="small muted">Si la olvidás, la única forma de entrar es borrar los datos de la app: exportá una copia de seguridad cada tanto.</p>
+    </section>
+
+    <section class="card">
       <h3>Reiniciar</h3>
       <button class="btn btn-sm btn-ghost" data-action="restart-cycle">Reiniciar bloque (semana 1)</button>
       <button class="btn btn-sm danger" data-action="reset-all">Borrar todos los datos</button>
@@ -1119,6 +1134,94 @@
   }
 
   // ------------------------------------------------------------------
+  // Contraseña (bloqueo local)
+  // ------------------------------------------------------------------
+  const LOCK_AFTER_MIN = 5;
+  const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const unb64 = (str) => Uint8Array.from(atob(str), (c) => c.charCodeAt(0));
+
+  async function hashPw(pw, saltB64) {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: unb64(saltB64), iterations: 150000, hash: 'SHA-256' }, key, 256);
+    return b64(bits);
+  }
+  async function checkPw(pw) {
+    if (!S.lock) return true;
+    return (await hashPw(pw, S.lock.salt)) === S.lock.hash;
+  }
+  async function setPw(pw) {
+    const salt = b64(crypto.getRandomValues(new Uint8Array(16)));
+    S.lock = { salt, hash: await hashPw(pw, salt) };
+    save();
+  }
+
+  let locked = false;
+  let fails = 0; let blockedUntil = 0;
+  function showLock() {
+    if (!S.lock) return;
+    locked = true;
+    let el = $('#lock');
+    if (!el) { el = document.createElement('div'); el.id = 'lock'; el.className = 'lock'; document.body.appendChild(el); }
+    el.innerHTML = `
+      <form id="unlockForm" class="lock-card">
+        <div class="logo">${logoSvg()}</div>
+        <h2>Rutina Gim</h2>
+        <p class="muted small">Ingresá tu contraseña</p>
+        <input name="pw" type="password" autocomplete="current-password" aria-label="Contraseña" required/>
+        <p class="lock-err" id="lockErr"></p>
+        <button class="btn btn-primary btn-block" type="submit">Entrar</button>
+        <button class="link small" type="button" data-action="pw-forgot">Olvidé la contraseña</button>
+      </form>`;
+    el.hidden = false;
+    setTimeout(() => { const i = $('#unlockForm input'); i && i.focus(); }, 50);
+  }
+  function hideLock() { locked = false; const el = $('#lock'); if (el) { el.hidden = true; el.innerHTML = ''; } }
+
+  let hiddenAt = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') hiddenAt = Date.now();
+    else if (S.lock && !locked && !S.active && hiddenAt && Date.now() - hiddenAt > LOCK_AFTER_MIN * 60000) showLock();
+  });
+
+  document.addEventListener('submit', async (ev) => {
+    const f = ev.target;
+    if (f.id === 'unlockForm') {
+      ev.preventDefault();
+      const err = $('#lockErr');
+      if (Date.now() < blockedUntil) { err.textContent = `Demasiados intentos. Esperá ${Math.ceil((blockedUntil - Date.now()) / 1000)} s.`; return; }
+      const pw = new FormData(f).get('pw');
+      if (await checkPw(pw)) { fails = 0; hideLock(); return; }
+      fails++;
+      if (fails >= 5) { blockedUntil = Date.now() + 30000 * (fails - 4); }
+      err.textContent = fails >= 5 ? 'Contraseña incorrecta. Esperá 30 s para reintentar.' : 'Contraseña incorrecta.';
+      f.reset(); vibrate(200);
+    }
+    if (f.id === 'pwForm') {
+      ev.preventDefault();
+      const fd = new FormData(f);
+      if (S.lock && !(await checkPw(fd.get('cur')))) { toast('La contraseña actual no es correcta'); return; }
+      const pw = fd.get('pw') || '';
+      if (pw.length < 4) { toast('La contraseña debe tener al menos 4 caracteres'); return; }
+      if (pw !== fd.get('pw2')) { toast('Las contraseñas no coinciden'); return; }
+      await setPw(pw); render(); toast('Contraseña guardada 🔒');
+    }
+  }, true);
+
+  document.addEventListener('click', async (ev) => {
+    const el = ev.target.closest('[data-action="pw-remove"], [data-action="pw-forgot"]');
+    if (!el) return;
+    ev.stopPropagation();
+    if (el.dataset.action === 'pw-remove') {
+      const cur = $('#pwForm [name=cur]').value;
+      if (!(await checkPw(cur))) { toast('Escribí tu contraseña actual para quitarla'); return; }
+      S.lock = null; save(); render(); toast('Contraseña desactivada');
+    } else if (confirm('Sin la contraseña no se pueden recuperar los datos. ¿Borrar TODO (perfil, rutina e historial) y empezar de nuevo?')) {
+      try { localStorage.removeItem(KEY); } catch (e) { /* */ }
+      location.reload();
+    }
+  }, true);
+
+  // ------------------------------------------------------------------
   // Inicio
   // ------------------------------------------------------------------
   render();
@@ -1126,6 +1229,7 @@
     // retomar automáticamente un entrenamiento en curso
     openWorkout();
   }
+  if (S.lock) showLock();
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   }
